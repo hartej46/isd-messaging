@@ -116,6 +116,34 @@ export const storageService = {
     }
   },
 
+  async toggleRead(threadId) {
+    try {
+      const threads = await this.getThreads();
+      const updated = threads.map((t) =>
+        t.id === threadId
+          ? { ...t, unreadCount: t.unreadCount > 0 ? 0 : 1 }
+          : t
+      );
+      await this.saveThreads(updated);
+      return updated;
+    } catch (error) {
+      console.error(`Failed to toggle read for thread ${threadId}:`, error);
+      throw error;
+    }
+  },
+
+  async markAllAsRead() {
+    try {
+      const threads = await this.getThreads();
+      const updated = threads.map((t) => ({ ...t, unreadCount: 0 }));
+      await this.saveThreads(updated);
+      return updated;
+    } catch (error) {
+      console.error('Failed to mark all as read:', error);
+      throw error;
+    }
+  },
+
   // Messages Methods
   async getMessages(threadId) {
     try {
