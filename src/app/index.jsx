@@ -1,42 +1,74 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
 import { BorderRadius, Spacing } from '@/constants/theme';
-import { SquircleAvatar } from '@/components/one-ui/SquircleAvatar';
+import { SearchBar } from '@/components/one-ui/SearchBar';
+import { CategoryTabs } from '@/components/one-ui/CategoryTabs';
+import { ConversationItem } from '@/components/one-ui/ConversationItem';
+import { ComposeFAB } from '@/components/one-ui/ComposeFAB';
+import { ThreadActionModal } from '@/components/one-ui/ThreadActionModal';
+import { OverflowMenuModal } from '@/components/one-ui/OverflowMenuModal';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const { user, logout } = useAuth();
+
   const [threads, setThreads] = useState([]);
-  const [loadingThreads, setLoadingThreads] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+
+  // Modals state
+  const [selectedThread, setSelectedThread] = useState(null);
+  const [actionModalVisible, setActionModalVisible] = useState(false);
+  const [overflowMenuVisible, setOverflowMenuVisible] = useState(false);
+
+  const refreshThreadList = useCallback(async () => {
+    try {
+      const data = await storageService.getThreads();
+      const sorted = [...data].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return 0;
+      });
+      setThreads(sorted);
+    } catch (err) {
+      console.error('Failed to load threads:', err);
+    }
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
     storageService
       .getThreads()
       .then((data) => {
-        if (isMounted) {
-          setThreads(data);
-          setLoadingThreads(false);
-        }
+        if (!isMounted) return;
+        const sorted = [...data].sort((a, b) => {
+          if (a.isPinned && !b.isPinned) return -1;
+          if (!a.isPinned && b.isPinned) return 1;
+          return 0;
+        });
+        setThreads(sorted);
+        setLoading(false);
       })
       .catch((err) => {
         console.error('Failed to load threads:', err);
-        if (isMounted) {
-          setLoadingThreads(false);
-        }
+        if (isMounted) setLoading(false);
       });
 
     return () => {
@@ -44,188 +76,269 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const handleResetData = async () => {
-    setLoadingThreads(true);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await refreshThreadList();
+    setRefreshing(false);
+  };
+
+  // Actions
+  const handleTogglePin = async (threadId) => {
     try {
-      await storageService.resetAllData();
-      const data = await storageService.getThreads();
-      setThreads(data);
+      const updated = await storageService.togglePin(threadId);
+      const sorted = [...updated].sort((a, b) => {
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+        return 0;
+      });
+      setThreads(sorted);
     } catch (err) {
-      console.error('Failed to reset data:', err);
-    } finally {
-      setLoadingThreads(false);
+      console.error('Failed to toggle pin:', err);
     }
   };
 
+  const handleToggleRead = async (threadId) => {
+    try {
+      const updated = await storageService.toggleRead(threadId);
+      setThreads(updated);
+    } catch (err) {
+      console.error('Failed to toggle read:', err);
+    }
+  };
+
+  const handleDeleteThread = async (threadId) => {
+    try {
+      const updated = await storageService.deleteThread(threadId);
+      setThreads(updated);
+    } catch (err) {
+      console.error('Failed to delete thread:', err);
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      const updated = await storageService.markAllAsRead();
+      setThreads(updated);
+    } catch (err) {
+      console.error('Failed to mark all read:', err);
+    }
+  };
+
+  const handleResetData = async () => {
+    setLoading(true);
+    try {
+      await storageService.resetAllData();
+      await refreshThreadList();
+    } catch (err) {
+      console.error('Failed to reset data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOpenConversation = (thread) => {
+    // If conversation had unread count, clear it
+    if (thread.unreadCount > 0) {
+      handleToggleRead(thread.id);
+    }
+    // For Day 2, tapping also opens compose with that recipient or gives visual feedback
+    router.push({
+      pathname: '/compose',
+      params: { recipient: thread.contactName },
+    });
+  };
+
+  const handleLongPressConversation = (thread) => {
+    setSelectedThread(thread);
+    setActionModalVisible(true);
+  };
+
+  // Computed metrics
+  const totalUnread = useMemo(
+    () => threads.reduce((acc, t) => acc + (t.unreadCount > 0 ? 1 : 0), 0),
+    [threads]
+  );
+
+  const pinnedCount = useMemo(
+    () => threads.reduce((acc, t) => acc + (t.isPinned ? 1 : 0), 0),
+    [threads]
+  );
+
+  const categoryTabs = useMemo(
+    () => [
+      { id: 'all', label: 'All', badge: threads.length },
+      { id: 'unread', label: 'Unread', badge: totalUnread },
+      { id: 'starred', label: 'Starred', badge: pinnedCount },
+    ],
+    [threads.length, totalUnread, pinnedCount]
+  );
+
+  // Filtering
+  const filteredThreads = useMemo(() => {
+    return threads.filter((t) => {
+      // Search query filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesName = t.contactName.toLowerCase().includes(query);
+        const matchesMsg = t.lastMessage.toLowerCase().includes(query);
+        const matchesPhone = t.phoneNumber.includes(query);
+        if (!matchesName && !matchesMsg && !matchesPhone) return false;
+      }
+
+      // Tab filter
+      if (activeTab === 'unread') return t.unreadCount > 0;
+      if (activeTab === 'starred') return t.isPinned;
+
+      return true;
+    });
+  }, [threads, searchQuery, activeTab]);
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-      {/* One UI Large Header */}
-      <View style={styles.headerContainer}>
-        <View style={styles.headerTopRow}>
-          <Text style={[styles.appTitle, { color: theme.text }]}>Messages</Text>
-          <View style={styles.headerRightActions}>
+      {/* Signature One UI Viewing Area Header */}
+      <View style={styles.headerViewingArea}>
+        <View style={styles.headerTopBar}>
+          <View style={styles.headerTitleGroup}>
+            <Text style={[styles.appTitle, { color: theme.text }]}>Messages</Text>
+            {totalUnread > 0 && (
+              <View
+                style={[
+                  styles.unreadHeaderBadge,
+                  { backgroundColor: theme.primaryLight },
+                ]}>
+                <Text style={[styles.unreadHeaderText, { color: theme.primary }]}>
+                  {totalUnread} new
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Right Action Icons */}
+          <View style={styles.headerIconsRow}>
             <Pressable
               style={[
                 styles.iconBtn,
                 { backgroundColor: theme.cardSubtle, borderColor: theme.border },
               ]}
-              onPress={handleResetData}
-              accessibilityLabel="Reset local data">
-              <Ionicons name="refresh-outline" size={18} color={theme.textSecondary} />
-            </Pressable>
-            <Pressable
-              style={[
-                styles.iconBtn,
-                { backgroundColor: theme.cardSubtle, borderColor: theme.border },
-              ]}
-              onPress={logout}
-              accessibilityLabel="Sign out">
-              <Ionicons name="log-out-outline" size={18} color={theme.danger} />
+              onPress={() => setOverflowMenuVisible(true)}
+              hitSlop={8}
+              accessibilityLabel="More options">
+              <Ionicons name="ellipsis-vertical" size={18} color={theme.text} />
             </Pressable>
           </View>
         </View>
-        <Text style={[styles.headerSubtitle, { color: theme.textSecondary }]}>
-          One UI • Local Storage Active
+
+        <Text style={[styles.headerGreeting, { color: theme.textSecondary }]}>
+          {user?.name ? `Welcome back, ${user.name}` : 'Keep in touch with friends and family'}
         </Text>
+
+        {/* Search Bar */}
+        <View style={styles.searchWrapper}>
+          <SearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            onClear={() => setSearchQuery('')}
+            placeholder="Search conversations, contacts, numbers..."
+          />
+        </View>
+
+        {/* Category Tabs */}
+        <CategoryTabs
+          tabs={categoryTabs}
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+        />
       </View>
 
-      <FlatList
-        data={threads}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View style={styles.topCardsSection}>
-            {/* User Profile Card */}
-            <View
-              style={[
-                styles.userCard,
-                { backgroundColor: theme.cardSubtle, borderColor: theme.border },
-              ]}>
-              <SquircleAvatar
-                initials={user?.avatarInitials || 'GU'}
-                size={54}
-                backgroundColor={theme.primary}
-              />
-              <View style={styles.userInfo}>
-                <View style={styles.userNameRow}>
-                  <Text style={[styles.userName, { color: theme.text }]}>
-                    {user?.name || 'Galaxy User'}
-                  </Text>
-                  <View
-                    style={[
-                      styles.onlineBadge,
-                      { backgroundColor: `${theme.success}20` },
-                    ]}>
-                    <View
-                      style={[styles.onlineDot, { backgroundColor: theme.success }]}
-                    />
-                    <Text style={[styles.onlineText, { color: theme.success }]}>
-                      Logged In
-                    </Text>
-                  </View>
-                </View>
-                <Text style={[styles.userEmail, { color: theme.textSecondary }]}>
-                  {user?.email || 'user@galaxy.com'}
-                </Text>
-              </View>
-            </View>
-
-            {/* Day 1 Milestone Card */}
-            <View
-              style={[
-                styles.milestoneCard,
-                { backgroundColor: theme.primaryLight, borderColor: theme.primary },
-              ]}>
-              <View style={styles.milestoneHeader}>
-                <Ionicons name="checkmark-done-circle" size={22} color={theme.primary} />
-                <Text style={[styles.milestoneTitle, { color: theme.primaryDark }]}>
-                  Day 1 Implementation Complete
-                </Text>
-              </View>
-              <Text style={[styles.milestoneDesc, { color: theme.primaryDark }]}>
-                ✓ AsyncStorage session persistence active{'\n'}
-                ✓ Mock login system enabled for any credentials{'\n'}
-                ✓ Modern One UI theme system and squircle tokens applied{'\n'}
-                ✓ {threads.length} seeded conversations loaded from local storage
-              </Text>
-            </View>
-
-            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>
-                LOCAL CONVERSATION THREADS ({threads.length})
-              </Text>
-              {loadingThreads && <ActivityIndicator size="small" color={theme.primary} />}
-            </View>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <View
-            style={[
-              styles.threadCard,
-              { backgroundColor: theme.card, borderColor: theme.border },
-            ]}>
-            <SquircleAvatar
-              initials={item.contactName}
-              size={44}
-              backgroundColor={item.avatarColor}
+      {/* Main Conversation FlatList */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+            Loading conversations...
+          </Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredThreads}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={theme.primary}
             />
-            <View style={styles.threadContent}>
-              <View style={styles.threadTopRow}>
-                <View style={styles.nameRow}>
-                  <Text style={[styles.contactName, { color: theme.text }]}>
-                    {item.contactName}
-                  </Text>
-                  {item.isPinned && (
-                    <Ionicons
-                      name="pin"
-                      size={14}
-                      color={theme.pinned}
-                      style={styles.pinIcon}
-                    />
-                  )}
-                </View>
-                <Text style={[styles.threadTimestamp, { color: theme.textTertiary }]}>
-                  {item.timestamp}
-                </Text>
+          }
+          renderItem={({ item }) => (
+            <ConversationItem
+              thread={item}
+              onPress={handleOpenConversation}
+              onLongPress={handleLongPressConversation}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <View
+                style={[
+                  styles.emptyIconCircle,
+                  { backgroundColor: theme.backgroundElement },
+                ]}>
+                <Ionicons
+                  name={searchQuery ? 'search-outline' : 'chatbubbles-outline'}
+                  size={42}
+                  color={theme.textTertiary}
+                />
               </View>
-              <View style={styles.threadBottomRow}>
-                <Text
-                  style={[styles.lastMessage, { color: theme.textSecondary }]}
-                  numberOfLines={1}>
-                  {item.lastMessage}
-                </Text>
-                {item.unreadCount > 0 && (
-                  <View
-                    style={[
-                      styles.unreadPill,
-                      { backgroundColor: theme.unreadBadge },
-                    ]}>
-                    <Text style={styles.unreadPillText}>{item.unreadCount}</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        )}
-        ListFooterComponent={
-          <View style={styles.footerSection}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.logoutBtn,
-                {
-                  borderColor: theme.danger,
-                  backgroundColor: pressed ? `${theme.danger}15` : 'transparent',
-                },
-              ]}
-              onPress={logout}>
-              <Ionicons name="log-out-outline" size={18} color={theme.danger} />
-              <Text style={[styles.logoutBtnText, { color: theme.danger }]}>
-                Sign Out of Messages
+              <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                {searchQuery ? 'No messages found' : 'No conversations yet'}
               </Text>
-            </Pressable>
-          </View>
-        }
+              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                {searchQuery
+                  ? `No results matching "${searchQuery}". Check your spelling or try another name.`
+                  : 'Tap the pencil button below to start your first conversation.'}
+              </Text>
+              {searchQuery ? (
+                <Pressable
+                  style={[
+                    styles.resetSearchBtn,
+                    { backgroundColor: theme.primaryLight },
+                  ]}
+                  onPress={() => setSearchQuery('')}>
+                  <Text style={[styles.resetSearchText, { color: theme.primary }]}>
+                    Clear search filter
+                  </Text>
+                </Pressable>
+              ) : null}
+            </View>
+          }
+        />
+      )}
+
+      {/* Floating Action Button */}
+      <ComposeFAB onPress={() => router.push('/compose')} />
+
+      {/* Long-press Thread Context Modal */}
+      <ThreadActionModal
+        visible={actionModalVisible}
+        thread={selectedThread}
+        onClose={() => {
+          setActionModalVisible(false);
+          setSelectedThread(null);
+        }}
+        onTogglePin={handleTogglePin}
+        onToggleRead={handleToggleRead}
+        onDelete={handleDeleteThread}
+      />
+
+      {/* Overflow Options Modal */}
+      <OverflowMenuModal
+        visible={overflowMenuVisible}
+        onClose={() => setOverflowMenuVisible(false)}
+        onMarkAllRead={handleMarkAllRead}
+        onResetData={handleResetData}
+        onSignOut={logout}
       />
     </SafeAreaView>
   );
@@ -235,28 +348,39 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
   },
-  headerContainer: {
+  headerViewingArea: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
-    paddingBottom: Spacing.three,
+    paddingBottom: Spacing.two,
+    gap: Spacing.two,
   },
-  headerTopRow: {
+  headerTopBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitleGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: Spacing.two,
   },
   appTitle: {
     fontSize: 34,
     fontWeight: '800',
-    letterSpacing: -0.7,
+    letterSpacing: -0.8,
   },
-  headerSubtitle: {
-    fontSize: 13,
-    fontWeight: '500',
-    marginTop: 2,
+  unreadHeaderBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.pill,
   },
-  headerRightActions: {
+  unreadHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  headerIconsRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: Spacing.two,
   },
   iconBtn: {
@@ -267,158 +391,60 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
   },
-  listContent: {
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.six,
-  },
-  topCardsSection: {
-    gap: Spacing.three,
-    marginBottom: Spacing.three,
-  },
-  userCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    gap: Spacing.three,
-  },
-  userInfo: {
-    flex: 1,
-  },
-  userNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  userName: {
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  userEmail: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  onlineBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.pill,
-    gap: 4,
-  },
-  onlineDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  onlineText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  milestoneCard: {
-    padding: Spacing.three,
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    gap: Spacing.two,
-  },
-  milestoneHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  milestoneTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  milestoneDesc: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: Spacing.two,
-    marginBottom: Spacing.one,
-    paddingHorizontal: Spacing.one,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-  },
-  threadCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    marginBottom: Spacing.two,
-    gap: Spacing.three,
-  },
-  threadContent: {
-    flex: 1,
-  },
-  threadTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pinIcon: {
-    marginLeft: 2,
-  },
-  threadTimestamp: {
-    fontSize: 12,
-  },
-  threadBottomRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  lastMessage: {
+  headerGreeting: {
     fontSize: 14,
-    flex: 1,
-    marginRight: Spacing.two,
+    fontWeight: '500',
+    marginTop: -4,
   },
-  unreadPill: {
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
+  searchWrapper: {
+    marginVertical: Spacing.one,
+  },
+  listContainer: {
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: 90, // Room for FAB
+  },
+  loadingContainer: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 6,
+    gap: Spacing.two,
   },
-  unreadPillText: {
-    color: '#FFFFFF',
-    fontSize: 11,
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.six,
+    paddingHorizontal: Spacing.five,
+    gap: Spacing.two,
+  },
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.two,
+  },
+  emptyTitle: {
+    fontSize: 18,
     fontWeight: '700',
   },
-  footerSection: {
-    marginTop: Spacing.four,
-    alignItems: 'center',
-  },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.four,
-    borderRadius: BorderRadius.pill,
-    borderWidth: 1,
-  },
-  logoutBtnText: {
+  emptySubtitle: {
     fontSize: 14,
-    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  resetSearchBtn: {
+    marginTop: Spacing.two,
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.two,
+    borderRadius: BorderRadius.pill,
+  },
+  resetSearchText: {
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
