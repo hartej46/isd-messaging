@@ -144,6 +144,30 @@ export const storageService = {
     }
   },
 
+  async getThreadById(threadId) {
+    try {
+      const threads = await this.getThreads();
+      return threads.find((t) => t.id === threadId) || null;
+    } catch (error) {
+      console.error(`Failed to get thread ${threadId}:`, error);
+      return null;
+    }
+  },
+
+  async markThreadAsRead(threadId) {
+    try {
+      const threads = await this.getThreads();
+      const updated = threads.map((t) =>
+        t.id === threadId ? { ...t, unreadCount: 0 } : t
+      );
+      await this.saveThreads(updated);
+      return updated;
+    } catch (error) {
+      console.error(`Failed to mark thread ${threadId} as read:`, error);
+      throw error;
+    }
+  },
+
   // Messages Methods
   async getMessages(threadId) {
     try {
@@ -182,6 +206,65 @@ export const storageService = {
       return updated;
     } catch (error) {
       console.error(`Failed to save message in thread ${threadId}:`, error);
+      throw error;
+    }
+  },
+
+  async updateMessageStatus(threadId, messageId, status) {
+    try {
+      const key = `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`;
+      const current = await this.getMessages(threadId);
+      const updated = current.map((m) =>
+        m.id === messageId ? { ...m, status } : m
+      );
+      await AsyncStorage.setItem(key, JSON.stringify(updated));
+      return updated;
+    } catch (error) {
+      console.error(`Failed to update status for message ${messageId}:`, error);
+      throw error;
+    }
+  },
+
+  async deleteMessage(threadId, messageId) {
+    try {
+      const key = `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`;
+      const current = await this.getMessages(threadId);
+      const updated = current.filter((m) => m.id !== messageId);
+      await AsyncStorage.setItem(key, JSON.stringify(updated));
+
+      const threads = await this.getThreads();
+      const threadIndex = threads.findIndex((t) => t.id === threadId);
+      if (threadIndex >= 0) {
+        const lastMsg = updated[updated.length - 1];
+        threads[threadIndex].lastMessage = lastMsg ? lastMsg.text : 'No messages yet';
+        if (lastMsg) {
+          threads[threadIndex].timestamp = lastMsg.timestamp;
+        }
+        await this.saveThreads(threads);
+      }
+
+      return updated;
+    } catch (error) {
+      console.error(`Failed to delete message ${messageId}:`, error);
+      throw error;
+    }
+  },
+
+  async clearThreadMessages(threadId) {
+    try {
+      const key = `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`;
+      await AsyncStorage.setItem(key, JSON.stringify([]));
+
+      const threads = await this.getThreads();
+      const threadIndex = threads.findIndex((t) => t.id === threadId);
+      if (threadIndex >= 0) {
+        threads[threadIndex].lastMessage = 'No messages yet';
+        await this.saveThreads(threads);
+      }
+
+      return [];
+    } catch (error) {
+      console.error(`Failed to clear messages for thread ${threadId}:`, error);
       throw error;
     }
   },
