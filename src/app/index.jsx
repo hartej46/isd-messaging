@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
@@ -52,29 +52,31 @@ export default function HomeScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    let isMounted = true;
-    storageService
-      .getThreads()
-      .then((data) => {
-        if (!isMounted) return;
-        const sorted = [...data].sort((a, b) => {
-          if (a.isPinned && !b.isPinned) return -1;
-          if (!a.isPinned && b.isPinned) return 1;
-          return 0;
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+      storageService
+        .getThreads()
+        .then((data) => {
+          if (!isActive) return;
+          const sorted = [...data].sort((a, b) => {
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            return 0;
+          });
+          setThreads(sorted);
+          setLoading(false);
+        })
+        .catch((err) => {
+          console.error('Failed to load threads:', err);
+          if (isActive) setLoading(false);
         });
-        setThreads(sorted);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to load threads:', err);
-        if (isMounted) setLoading(false);
-      });
 
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      return () => {
+        isActive = false;
+      };
+    }, [])
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -136,16 +138,17 @@ export default function HomeScreen() {
     }
   };
 
-  const handleOpenConversation = (thread) => {
-    // If conversation had unread count, clear it
+  const handleOpenConversation = async (thread) => {
+    // Clear unread count and navigate to the conversation thread
     if (thread.unreadCount > 0) {
-      handleToggleRead(thread.id);
+      try {
+        const updated = await storageService.markThreadAsRead(thread.id);
+        setThreads(updated);
+      } catch (err) {
+        console.error('Failed to mark thread read:', err);
+      }
     }
-    // For Day 2, tapping also opens compose with that recipient or gives visual feedback
-    router.push({
-      pathname: '/compose',
-      params: { recipient: thread.contactName },
-    });
+    router.push(`/chat/${thread.id}`);
   };
 
   const handleLongPressConversation = (thread) => {

@@ -82,7 +82,7 @@ export default function ComposeScreen() {
       };
 
       await storageService.saveMessage(matchedThread.id, newMessage);
-      router.replace('/');
+      router.replace(`/chat/${matchedThread.id}`);
     } catch (err) {
       console.error('Failed to create message thread:', err);
     } finally {
