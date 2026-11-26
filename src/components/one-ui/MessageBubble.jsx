@@ -9,7 +9,7 @@ const WAVE_BARS = [8, 16, 12, 22, 14, 20, 10, 18, 13, 9];
 function RichAttachmentContent({ text, isMe, theme }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
-  if (text.startsWith('📷 [Photo')) {
+  if (text.startsWith('[Photo')) {
     return (
       <View style={styles.attachmentCard}>
         <View
@@ -45,7 +45,7 @@ function RichAttachmentContent({ text, isMe, theme }) {
     );
   }
 
-  if (text.startsWith('📍 [Shared')) {
+  if (text.startsWith('[Shared')) {
     return (
       <View style={styles.locationCard}>
         <View
@@ -85,7 +85,7 @@ function RichAttachmentContent({ text, isMe, theme }) {
     );
   }
 
-  if (text.startsWith('🎤 [Voice')) {
+  if (text.startsWith('[Voice')) {
     return (
       <Pressable
         style={styles.voiceRow}

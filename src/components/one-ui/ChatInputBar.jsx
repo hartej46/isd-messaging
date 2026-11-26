@@ -13,7 +13,7 @@ import { BorderRadius, Spacing } from '@/constants/theme';
 
 const QUICK_REPLIES = [
   'On my way!',
-  'Sounds good 👍',
+  'Sounds good',
   'Call you right back',
   'Running 5 mins late',
 ];
@@ -48,7 +48,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
           <View style={styles.attachmentRow}>
             <Pressable
               style={styles.attachmentItem}
-              onPress={() => handleQuickOption('📷 [Photo attachment]')}>
+              onPress={() => handleQuickOption('[Photo attachment]')}>
               <View
                 style={[styles.attachmentIcon, { backgroundColor: '#E11D4818' }]}>
                 <Ionicons name="image-outline" size={20} color="#E11D48" />
@@ -60,7 +60,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
             <Pressable
               style={styles.attachmentItem}
-              onPress={() => handleQuickOption('📍 [Shared current location]')}>
+              onPress={() => handleQuickOption('[Shared current location]')}>
               <View
                 style={[styles.attachmentIcon, { backgroundColor: '#05966918' }]}>
                 <Ionicons name="location-outline" size={20} color="#059669" />
@@ -72,7 +72,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
             <Pressable
               style={styles.attachmentItem}
-              onPress={() => handleQuickOption('🎤 [Voice message 0:08]')}>
+              onPress={() => handleQuickOption('[Voice message 0:08]')}>
               <View
                 style={[styles.attachmentIcon, { backgroundColor: '#7C3AED18' }]}>
                 <Ionicons name="mic-outline" size={20} color="#7C3AED" />
@@ -84,7 +84,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
             <Pressable
               style={styles.attachmentItem}
-              onPress={() => handleQuickOption('📅 Let us schedule a time to catch up.')}>
+              onPress={() => handleQuickOption('Let us schedule a time to catch up.')}>
               <View
                 style={[styles.attachmentIcon, { backgroundColor: '#2563EB18' }]}>
                 <Ionicons name="calendar-outline" size={20} color="#2563EB" />
