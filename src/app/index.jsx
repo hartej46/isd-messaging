@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -22,6 +22,7 @@ import { ConversationItem } from '@/components/one-ui/ConversationItem';
 import { ComposeFAB } from '@/components/one-ui/ComposeFAB';
 import { ThreadActionModal } from '@/components/one-ui/ThreadActionModal';
 import { OverflowMenuModal } from '@/components/one-ui/OverflowMenuModal';
+import { MessageSearchResults } from '@/components/one-ui/MessageSearchResults';
 
 export default function HomeScreen() {
   const theme = useTheme();
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [messageMatches, setMessageMatches] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
 
   // Modals state
@@ -82,6 +84,34 @@ export default function HomeScreen() {
     setRefreshing(true);
     await refreshThreadList();
     setRefreshing(false);
+  };
+
+  useEffect(() => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return undefined;
+
+    let isActive = true;
+    storageService
+      .searchAllMessages(trimmed)
+      .then((matches) => {
+        if (isActive) {
+          setMessageMatches(matches);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to search messages:', err);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [searchQuery]);
+
+  const handleSearchChange = (value) => {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setMessageMatches([]);
+    }
   };
 
   // Actions
@@ -239,9 +269,9 @@ export default function HomeScreen() {
         <View style={styles.searchWrapper}>
           <SearchBar
             value={searchQuery}
-            onChangeText={setSearchQuery}
-            onClear={() => setSearchQuery('')}
-            placeholder="Search conversations, contacts, numbers..."
+            onChangeText={handleSearchChange}
+            onClear={() => handleSearchChange('')}
+            placeholder="Search conversations, messages, numbers..."
           />
         </View>
 
@@ -281,40 +311,51 @@ export default function HomeScreen() {
               onLongPress={handleLongPressConversation}
             />
           )}
+          ListFooterComponent={
+            searchQuery.trim() ? (
+              <MessageSearchResults
+                matches={messageMatches}
+                query={searchQuery}
+                onSelectMatch={(match) => router.push(`/chat/${match.thread.id}`)}
+              />
+            ) : null
+          }
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <View
-                style={[
-                  styles.emptyIconCircle,
-                  { backgroundColor: theme.backgroundElement },
-                ]}>
-                <Ionicons
-                  name={searchQuery ? 'search-outline' : 'chatbubbles-outline'}
-                  size={42}
-                  color={theme.textTertiary}
-                />
-              </View>
-              <Text style={[styles.emptyTitle, { color: theme.text }]}>
-                {searchQuery ? 'No messages found' : 'No conversations yet'}
-              </Text>
-              <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
-                {searchQuery
-                  ? `No results matching "${searchQuery}". Check your spelling or try another name.`
-                  : 'Tap the pencil button below to start your first conversation.'}
-              </Text>
-              {searchQuery ? (
-                <Pressable
+            searchQuery.trim() && messageMatches.length > 0 ? null : (
+              <View style={styles.emptyContainer}>
+                <View
                   style={[
-                    styles.resetSearchBtn,
-                    { backgroundColor: theme.primaryLight },
-                  ]}
-                  onPress={() => setSearchQuery('')}>
-                  <Text style={[styles.resetSearchText, { color: theme.primary }]}>
-                    Clear search filter
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
+                    styles.emptyIconCircle,
+                    { backgroundColor: theme.backgroundElement },
+                  ]}>
+                  <Ionicons
+                    name={searchQuery ? 'search-outline' : 'chatbubbles-outline'}
+                    size={42}
+                    color={theme.textTertiary}
+                  />
+                </View>
+                <Text style={[styles.emptyTitle, { color: theme.text }]}>
+                  {searchQuery ? 'No messages found' : 'No conversations yet'}
+                </Text>
+                <Text style={[styles.emptySubtitle, { color: theme.textSecondary }]}>
+                  {searchQuery
+                    ? `No results matching "${searchQuery}". Check your spelling or try another name.`
+                    : 'Tap the pencil button below to start your first conversation.'}
+                </Text>
+                {searchQuery ? (
+                  <Pressable
+                    style={[
+                      styles.resetSearchBtn,
+                      { backgroundColor: theme.primaryLight },
+                    ]}
+                    onPress={() => handleSearchChange('')}>
+                    <Text style={[styles.resetSearchText, { color: theme.primary }]}>
+                      Clear search filter
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </View>
+            )
           }
         />
       )}
