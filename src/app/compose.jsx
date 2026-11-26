@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,32 +11,84 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
+import { AVATAR_COLORS } from '@/services/mockData';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from '@/components/one-ui/SquircleAvatar';
 
+function pickAvatarColor(name) {
+  let sum = 0;
+  for (let i = 0; i < name.length; i += 1) {
+    sum += name.charCodeAt(i);
+  }
+  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
+}
+
 export default function ComposeScreen() {
   const theme = useTheme();
-  const [recipient, setRecipient] = useState('');
+  const params = useLocalSearchParams();
+  const initialRecipient = Array.isArray(params.recipient)
+    ? params.recipient[0]
+    : params.recipient;
+
+  const [query, setQuery] = useState(initialRecipient || '');
+  const [selectedContact, setSelectedContact] = useState(null);
   const [messageText, setMessageText] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [existingContacts, setExistingContacts] = useState([]);
+  const [contacts, setContacts] = useState({ recent: [], directory: [] });
 
-  React.useEffect(() => {
-    storageService.getThreads().then((threads) => {
-      setExistingContacts(threads);
-    });
-  }, []);
+  useEffect(() => {
+    let isMounted = true;
+    storageService
+      .getAllContacts()
+      .then((data) => {
+        if (!isMounted) return;
+        setContacts(data);
+        if (initialRecipient) {
+          const all = [...data.recent, ...data.directory];
+          const match = all.find(
+            (c) => c.contactName.toLowerCase() === initialRecipient.toLowerCase()
+          );
+          if (match) {
+            setSelectedContact(match);
+            setQuery('');
+          }
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load contacts:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialRecipient]);
+
+  const effectiveRecipientName = selectedContact
+    ? selectedContact.contactName
+    : query.trim();
 
   const handleSelectContact = (contact) => {
-    setRecipient(contact.contactName);
+    setSelectedContact(contact);
+    setQuery('');
+  };
+
+  const handleClearRecipient = () => {
+    setSelectedContact(null);
+    setQuery('');
+  };
+
+  const handleOpenExistingChat = (contact) => {
+    if (contact.threadId) {
+      router.replace(`/chat/${contact.threadId}`);
+    }
   };
 
   const handleSendMessage = async () => {
-    const cleanRecipient = recipient.trim();
+    const cleanRecipient = effectiveRecipientName;
     const cleanText = messageText.trim();
 
     if (!cleanRecipient || !cleanText || isSending) return;
@@ -44,7 +96,6 @@ export default function ComposeScreen() {
     setIsSending(true);
 
     try {
-      // Find if thread exists
       const threads = await storageService.getThreads();
       let matchedThread = threads.find(
         (t) =>
@@ -53,25 +104,31 @@ export default function ComposeScreen() {
       );
 
       const now = new Date();
-      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeStr = now.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
 
       if (!matchedThread) {
-        // Create new thread
         matchedThread = {
           id: `thread_${Date.now()}`,
           contactName: cleanRecipient,
-          phoneNumber: cleanRecipient.includes('@') ? cleanRecipient : '+1 (555) 000-0000',
-          avatarColor: '#1C68F3',
+          phoneNumber:
+            selectedContact?.phoneNumber ||
+            (cleanRecipient.includes('@') || /\d{4,}/.test(cleanRecipient)
+              ? cleanRecipient
+              : '+1 (555) 019-2834'),
+          avatarColor:
+            selectedContact?.avatarColor || pickAvatarColor(cleanRecipient),
           lastMessage: cleanText,
           timestamp: timeStr,
           unreadCount: 0,
           isPinned: false,
-          category: 'personal',
+          category: selectedContact?.category || 'personal',
         };
         await storageService.upsertThread(matchedThread);
       }
 
-      // Save message in thread
       const newMessage = {
         id: `msg_${Date.now()}`,
         threadId: matchedThread.id,
@@ -90,12 +147,38 @@ export default function ComposeScreen() {
     }
   };
 
-  const filteredContacts = existingContacts.filter((c) =>
-    recipient
-      ? c.contactName.toLowerCase().includes(recipient.toLowerCase()) ||
-        c.phoneNumber.includes(recipient)
-      : true
+  const normalizedQuery = query.trim().toLowerCase();
+
+  const filteredRecent = useMemo(
+    () =>
+      contacts.recent.filter((c) =>
+        normalizedQuery
+          ? c.contactName.toLowerCase().includes(normalizedQuery) ||
+            c.phoneNumber.toLowerCase().includes(normalizedQuery)
+          : true
+      ),
+    [contacts.recent, normalizedQuery]
   );
+
+  const filteredDirectory = useMemo(
+    () =>
+      contacts.directory.filter((c) =>
+        normalizedQuery
+          ? c.contactName.toLowerCase().includes(normalizedQuery) ||
+            c.phoneNumber.toLowerCase().includes(normalizedQuery)
+          : true
+      ),
+    [contacts.directory, normalizedQuery]
+  );
+
+  const exactMatchExists = useMemo(() => {
+    if (!normalizedQuery) return true;
+    return [...contacts.recent, ...contacts.directory].some(
+      (c) =>
+        c.contactName.toLowerCase() === normalizedQuery ||
+        c.phoneNumber.toLowerCase() === normalizedQuery
+    );
+  }, [contacts, normalizedQuery]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -114,53 +197,200 @@ export default function ComposeScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        {/* Recipient Input */}
+        {/* Recipient Chip / Input Area */}
         <View
           style={[
             styles.recipientContainer,
             { borderBottomColor: theme.border },
           ]}>
           <Text style={[styles.toLabel, { color: theme.textSecondary }]}>To</Text>
-          <TextInput
-            style={[styles.recipientInput, { color: theme.text }]}
-            placeholder="Type a name, phone number, or email"
-            placeholderTextColor={theme.textTertiary}
-            value={recipient}
-            onChangeText={setRecipient}
-            autoFocus
-          />
+          {selectedContact ? (
+            <View
+              style={[
+                styles.recipientChip,
+                {
+                  backgroundColor: theme.primaryLight,
+                  borderColor: theme.primary,
+                },
+              ]}>
+              <SquircleAvatar
+                initials={selectedContact.contactName}
+                size={24}
+                backgroundColor={selectedContact.avatarColor}
+              />
+              <Text style={[styles.chipName, { color: theme.primaryDark }]}>
+                {selectedContact.contactName}
+              </Text>
+              <Pressable onPress={handleClearRecipient} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color={theme.primary} />
+              </Pressable>
+            </View>
+          ) : (
+            <TextInput
+              style={[styles.recipientInput, { color: theme.text }]}
+              placeholder="Enter name, phone number, or email"
+              placeholderTextColor={theme.textTertiary}
+              value={query}
+              onChangeText={setQuery}
+              autoFocus={!initialRecipient}
+            />
+          )}
         </View>
 
         {/* Contact Suggestions List */}
         <ScrollView
           style={styles.suggestionsScroll}
-          keyboardShouldPersistTaps="handled">
-          <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
-            FREQUENT CONTACTS
-          </Text>
-          {filteredContacts.map((contact) => (
+          contentContainerStyle={styles.suggestionsContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {/* Custom Recipient Quick Add */}
+          {!selectedContact && query.trim().length > 0 && !exactMatchExists ? (
             <Pressable
-              key={contact.id}
               style={({ pressed }) => [
-                styles.contactRow,
-                pressed && { backgroundColor: theme.backgroundElement },
+                styles.customRecipientCard,
+                {
+                  backgroundColor: theme.primaryLight,
+                  borderColor: theme.primary,
+                  opacity: pressed ? 0.85 : 1,
+                },
               ]}
-              onPress={() => handleSelectContact(contact)}>
-              <SquircleAvatar
-                initials={contact.contactName}
-                size={40}
-                backgroundColor={contact.avatarColor}
-              />
+              onPress={() =>
+                handleSelectContact({
+                  id: `custom_${Date.now()}`,
+                  contactName: query.trim(),
+                  phoneNumber: query.trim(),
+                  avatarColor: pickAvatarColor(query.trim()),
+                  category: 'personal',
+                  hasExistingThread: false,
+                })
+              }>
+              <View
+                style={[styles.customIconCircle, { backgroundColor: theme.primary }]}>
+                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
+              </View>
               <View style={styles.contactDetails}>
-                <Text style={[styles.contactName, { color: theme.text }]}>
-                  {contact.contactName}
+                <Text style={[styles.customTitle, { color: theme.primaryDark }]}>
+                  Send to &quot;{query.trim()}&quot;
                 </Text>
-                <Text style={[styles.contactPhone, { color: theme.textSecondary }]}>
-                  {contact.phoneNumber}
+                <Text style={[styles.customSub, { color: theme.primary }]}>
+                  Tap to select new recipient
                 </Text>
               </View>
             </Pressable>
-          ))}
+          ) : null}
+
+          {/* Recent Conversations */}
+          {filteredRecent.length > 0 ? (
+            <View style={styles.sectionBlock}>
+              <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
+                RECENT CONVERSATIONS
+              </Text>
+              {filteredRecent.map((contact) => {
+                const isSelected = selectedContact?.id === contact.id;
+                return (
+                  <Pressable
+                    key={contact.id}
+                    style={({ pressed }) => [
+                      styles.contactRow,
+                      {
+                        backgroundColor: isSelected
+                          ? theme.primaryLight
+                          : pressed
+                            ? theme.backgroundElement
+                            : 'transparent',
+                      },
+                    ]}
+                    onPress={() => handleSelectContact(contact)}>
+                    <SquircleAvatar
+                      initials={contact.contactName}
+                      size={42}
+                      backgroundColor={contact.avatarColor}
+                    />
+                    <View style={styles.contactDetails}>
+                      <Text style={[styles.contactName, { color: theme.text }]}>
+                        {contact.contactName}
+                      </Text>
+                      <Text style={[styles.contactPhone, { color: theme.textSecondary }]}>
+                        {contact.phoneNumber}
+                      </Text>
+                    </View>
+                    <Pressable
+                      style={[
+                        styles.openChatBadge,
+                        { backgroundColor: theme.backgroundElement },
+                      ]}
+                      onPress={() => handleOpenExistingChat(contact)}
+                      hitSlop={6}>
+                      <Text style={[styles.openChatText, { color: theme.primary }]}>
+                        Open
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={13}
+                        color={theme.primary}
+                      />
+                    </Pressable>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
+
+          {/* Directory Contacts */}
+          {filteredDirectory.length > 0 ? (
+            <View style={styles.sectionBlock}>
+              <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
+                CONTACTS DIRECTORY
+              </Text>
+              {filteredDirectory.map((contact) => {
+                const isSelected = selectedContact?.id === contact.id;
+                return (
+                  <Pressable
+                    key={contact.id}
+                    style={({ pressed }) => [
+                      styles.contactRow,
+                      {
+                        backgroundColor: isSelected
+                          ? theme.primaryLight
+                          : pressed
+                            ? theme.backgroundElement
+                            : 'transparent',
+                      },
+                    ]}
+                    onPress={() => handleSelectContact(contact)}>
+                    <SquircleAvatar
+                      initials={contact.contactName}
+                      size={42}
+                      backgroundColor={contact.avatarColor}
+                    />
+                    <View style={styles.contactDetails}>
+                      <Text style={[styles.contactName, { color: theme.text }]}>
+                        {contact.contactName}
+                      </Text>
+                      <Text style={[styles.contactPhone, { color: theme.textSecondary }]}>
+                        {contact.phoneNumber}
+                      </Text>
+                    </View>
+                    {contact.category === 'business' ? (
+                      <View
+                        style={[
+                          styles.categoryPill,
+                          { backgroundColor: theme.backgroundElement },
+                        ]}>
+                        <Text
+                          style={[
+                            styles.categoryPillText,
+                            { color: theme.textSecondary },
+                          ]}>
+                          Business
+                        </Text>
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : null}
         </ScrollView>
 
         {/* Message Input Bar */}
@@ -182,7 +412,11 @@ export default function ComposeScreen() {
             ]}>
             <TextInput
               style={[styles.msgInput, { color: theme.text }]}
-              placeholder="Enter message"
+              placeholder={
+                effectiveRecipientName
+                  ? `Message ${effectiveRecipientName}`
+                  : 'Enter message'
+              }
               placeholderTextColor={theme.textTertiary}
               value={messageText}
               onChangeText={setMessageText}
@@ -193,12 +427,12 @@ export default function ComposeScreen() {
                 styles.sendBtn,
                 {
                   backgroundColor:
-                    messageText.trim() && recipient.trim()
+                    messageText.trim() && effectiveRecipientName
                       ? theme.primary
                       : theme.textTertiary,
                 },
               ]}
-              disabled={!messageText.trim() || !recipient.trim() || isSending}
+              disabled={!messageText.trim() || !effectiveRecipientName || isSending}
               onPress={handleSendMessage}>
               <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
             </Pressable>
@@ -241,9 +475,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     borderBottomWidth: 1,
     gap: Spacing.two,
+    minHeight: 56,
   },
   toLabel: {
     fontSize: 15,
+    fontWeight: '700',
+  },
+  recipientChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 4,
+    paddingRight: 8,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.pill,
+    borderWidth: 1,
+    gap: 8,
+  },
+  chipName: {
+    fontSize: 14,
     fontWeight: '700',
   },
   recipientInput: {
@@ -253,8 +502,39 @@ const styles = StyleSheet.create({
   },
   suggestionsScroll: {
     flex: 1,
+  },
+  suggestionsContent: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
+    paddingBottom: Spacing.four,
+  },
+  customRecipientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.three,
+    borderRadius: BorderRadius.card,
+    borderWidth: 1,
+    gap: Spacing.three,
+    marginTop: Spacing.one,
+    marginBottom: Spacing.two,
+  },
+  customIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  customSub: {
+    fontSize: 12,
+    marginTop: 1,
+  },
+  sectionBlock: {
+    marginBottom: Spacing.three,
   },
   sectionHeading: {
     fontSize: 11,
@@ -266,6 +546,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
     gap: Spacing.three,
     borderRadius: BorderRadius.medium,
   },
@@ -279,6 +560,27 @@ const styles = StyleSheet.create({
   contactPhone: {
     fontSize: 13,
     marginTop: 1,
+  },
+  openChatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: BorderRadius.pill,
+    gap: 2,
+  },
+  openChatText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  categoryPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.pill,
+  },
+  categoryPillText: {
+    fontSize: 11,
+    fontWeight: '600',
   },
   bottomInputBar: {
     padding: Spacing.three,
