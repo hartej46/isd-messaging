@@ -1,5 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { INITIAL_MESSAGES, INITIAL_THREADS } from './mockData';
+import {
+  DIRECTORY_CONTACTS,
+  INITIAL_MESSAGES,
+  INITIAL_THREADS,
+} from './mockData';
 
 const KEYS = {
   AUTH_SESSION: '@app_auth_session',
@@ -266,6 +270,70 @@ export const storageService = {
     } catch (error) {
       console.error(`Failed to clear messages for thread ${threadId}:`, error);
       throw error;
+    }
+  },
+
+  async searchAllMessages(query) {
+    const cleanQuery = (query || '').trim().toLowerCase();
+    if (!cleanQuery) return [];
+
+    try {
+      const threads = await this.getThreads();
+      const results = [];
+
+      await Promise.all(
+        threads.map(async (thread) => {
+          const msgs = await this.getMessages(thread.id);
+          for (const msg of msgs) {
+            if (msg.text && msg.text.toLowerCase().includes(cleanQuery)) {
+              results.push({
+                id: `${thread.id}_${msg.id}`,
+                message: msg,
+                thread,
+              });
+            }
+          }
+        })
+      );
+
+      return results;
+    } catch (error) {
+      console.error('Failed to search messages:', error);
+      return [];
+    }
+  },
+
+  async getAllContacts() {
+    try {
+      const threads = await this.getThreads();
+      const existingNames = new Set(
+        threads.map((t) => t.contactName.toLowerCase())
+      );
+
+      const newContacts = DIRECTORY_CONTACTS.filter(
+        (c) => !existingNames.has(c.contactName.toLowerCase())
+      ).map((c) => ({
+        ...c,
+        hasExistingThread: false,
+      }));
+
+      const recentContacts = threads.map((t) => ({
+        id: t.id,
+        threadId: t.id,
+        contactName: t.contactName,
+        phoneNumber: t.phoneNumber,
+        avatarColor: t.avatarColor,
+        category: t.category,
+        hasExistingThread: true,
+      }));
+
+      return {
+        recent: recentContacts,
+        directory: newContacts,
+      };
+    } catch (error) {
+      console.error('Failed to load contacts:', error);
+      return { recent: [], directory: [] };
     }
   },
 
