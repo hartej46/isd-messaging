@@ -169,3 +169,52 @@ export const INITIAL_MESSAGES = {
     },
   ],
 };
+
+export const AVATAR_COLORS = [
+  '#1C68F3',
+  '#E11D48',
+  '#059669',
+  '#7C3AED',
+  '#EA580C',
+  '#0D9488',
+  '#D97706',
+  '#DB2777',
+];
+
+export const DIRECTORY_CONTACTS = [
+  {
+    id: 'dir_1',
+    contactName: 'Maya Lin',
+    phoneNumber: '+1 (555) 412-8890',
+    avatarColor: '#DB2777',
+    category: 'personal',
+  },
+  {
+    id: 'dir_2',
+    contactName: 'Jordan Patel',
+    phoneNumber: '+1 (555) 673-1920',
+    avatarColor: '#D97706',
+    category: 'personal',
+  },
+  {
+    id: 'dir_3',
+    contactName: 'Dr. Emily Chen',
+    phoneNumber: '+1 (555) 784-3311',
+    avatarColor: '#059669',
+    category: 'business',
+  },
+  {
+    id: 'dir_4',
+    contactName: 'Liam Brooks',
+    phoneNumber: '+1 (555) 529-4402',
+    avatarColor: '#2563EB',
+    category: 'personal',
+  },
+  {
+    id: 'dir_5',
+    contactName: 'Office IT Desk',
+    phoneNumber: '+1 (555) 800-4848',
+    avatarColor: '#7C3AED',
+    category: 'business',
+  },
+];
