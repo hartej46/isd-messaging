@@ -1,8 +1,153 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
+
+const WAVE_BARS = [8, 16, 12, 22, 14, 20, 10, 18, 13, 9];
+
+function RichAttachmentContent({ text, isMe, theme }) {
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  if (text.startsWith('📷 [Photo')) {
+    return (
+      <View style={styles.attachmentCard}>
+        <View
+          style={[
+            styles.photoPlaceholder,
+            {
+              backgroundColor: isMe
+                ? 'rgba(255,255,255,0.18)'
+                : theme.backgroundElement,
+            },
+          ]}>
+          <Ionicons
+            name="image"
+            size={36}
+            color={isMe ? '#FFFFFF' : theme.primary}
+          />
+        </View>
+        <View style={styles.attachmentFooter}>
+          <Ionicons
+            name="camera-outline"
+            size={14}
+            color={isMe ? '#FFFFFF' : theme.textSecondary}
+          />
+          <Text
+            style={[
+              styles.attachmentTitle,
+              { color: isMe ? '#FFFFFF' : theme.text },
+            ]}>
+            Photo attachment
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (text.startsWith('📍 [Shared')) {
+    return (
+      <View style={styles.locationCard}>
+        <View
+          style={[
+            styles.locationIconBox,
+            {
+              backgroundColor: isMe
+                ? 'rgba(255,255,255,0.2)'
+                : `${theme.success}20`,
+            },
+          ]}>
+          <Ionicons
+            name="location"
+            size={20}
+            color={isMe ? '#FFFFFF' : theme.success}
+          />
+        </View>
+        <View style={styles.locationMeta}>
+          <Text
+            style={[
+              styles.attachmentTitle,
+              { color: isMe ? '#FFFFFF' : theme.text },
+            ]}>
+            Current Location
+          </Text>
+          <Text
+            style={[
+              styles.locationSub,
+              {
+                color: isMe ? 'rgba(255,255,255,0.8)' : theme.textSecondary,
+              },
+            ]}>
+            Pinned map coordinates shared
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  if (text.startsWith('🎤 [Voice')) {
+    return (
+      <Pressable
+        style={styles.voiceRow}
+        onPress={() => setIsPlaying((prev) => !prev)}>
+        <View
+          style={[
+            styles.playCircle,
+            {
+              backgroundColor: isMe
+                ? 'rgba(255,255,255,0.24)'
+                : theme.primary,
+            },
+          ]}>
+          <Ionicons
+            name={isPlaying ? 'pause' : 'play'}
+            size={14}
+            color="#FFFFFF"
+          />
+        </View>
+        <View style={styles.waveContainer}>
+          {WAVE_BARS.map((height, idx) => (
+            <View
+              key={idx}
+              style={[
+                styles.waveBar,
+                {
+                  height,
+                  backgroundColor: isMe
+                    ? isPlaying && idx < 6
+                      ? '#FFFFFF'
+                      : 'rgba(255,255,255,0.55)'
+                    : isPlaying && idx < 6
+                      ? theme.primary
+                      : theme.textTertiary,
+                },
+              ]}
+            />
+          ))}
+        </View>
+        <Text
+          style={[
+            styles.voiceDuration,
+            { color: isMe ? '#FFFFFF' : theme.textSecondary },
+          ]}>
+          {isPlaying ? '0:04' : '0:08'}
+        </Text>
+      </Pressable>
+    );
+  }
+
+  return (
+    <Text
+      style={[
+        styles.messageText,
+        {
+          color: isMe ? theme.outgoingBubbleText : theme.incomingBubbleText,
+        },
+      ]}>
+      {text}
+    </Text>
+  );
+}
 
 export function MessageBubble({
   message,
@@ -84,15 +229,7 @@ export function MessageBubble({
                 ],
             pressed && { opacity: 0.85 },
           ]}>
-          <Text
-            style={[
-              styles.messageText,
-              {
-                color: isMe ? theme.outgoingBubbleText : theme.incomingBubbleText,
-              },
-            ]}>
-            {message.text}
-          </Text>
+          <RichAttachmentContent text={message.text} isMe={isMe} theme={theme} />
         </Pressable>
 
         {/* Incoming timestamp beside bubble */}
@@ -161,6 +298,72 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: 15,
     lineHeight: 21,
+  },
+  attachmentCard: {
+    width: 190,
+    gap: 8,
+  },
+  photoPlaceholder: {
+    height: 110,
+    borderRadius: BorderRadius.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  attachmentFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  attachmentTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 180,
+  },
+  locationIconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  locationMeta: {
+    flex: 1,
+  },
+  locationSub: {
+    fontSize: 11,
+    marginTop: 1,
+  },
+  voiceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minWidth: 165,
+  },
+  playCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  waveContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    flex: 1,
+  },
+  waveBar: {
+    width: 3,
+    borderRadius: 2,
+  },
+  voiceDuration: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   metaContainer: {
     justifyContent: 'flex-end',
