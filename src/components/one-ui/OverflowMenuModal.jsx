@@ -77,7 +77,7 @@ export function OverflowMenuModal({
             }}>
             <RefreshCw size={18} color={theme.text} />
             <Text style={[styles.menuItemText, { color: theme.text }]}>
-              Reset demo conversations
+              Sync DummyJSON API
             </Text>
           </Pressable>
 

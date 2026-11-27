@@ -75,20 +75,28 @@ export default function SettingsScreen() {
 
   const handleResetDemo = () => {
     Alert.alert(
-      'Reset Demo Data',
-      'Restore all sample conversations and messages? Current local chats will be replaced.',
+      'Sync DummyJSON API',
+      'Fetch fresh contacts and conversations from DummyJSON API? Current local chats will be replaced.',
       [
         {
-          text: 'Reset',
+          text: 'Sync',
           style: 'destructive',
           onPress: async () => {
             setBusyAction(true);
             try {
+              await storageService.syncWithRemoteApi();
+              loadStats();
+              Alert.alert(
+                'Sync Complete',
+                'Fresh users and conversations have been loaded from DummyJSON API.'
+              );
+            } catch {
               await storageService.resetAllData();
               loadStats();
-              Alert.alert('Reset Complete', 'Sample conversations have been restored.');
-            } catch (err) {
-              console.error('Failed to reset data:', err);
+              Alert.alert(
+                'Offline Fallback',
+                'Could not reach DummyJSON API. Restored local sample conversations.'
+              );
             } finally {
               setBusyAction(false);
             }
@@ -346,7 +354,7 @@ export default function SettingsScreen() {
               <Ionicons name="refresh-outline" size={20} color={theme.text} />
             </View>
             <Text style={[styles.actionRowText, { color: theme.text }]}>
-              Reset demo conversations
+              Sync DummyJSON API data
             </Text>
             <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
           </Pressable>
