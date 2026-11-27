@@ -4,11 +4,13 @@ import {
   INITIAL_MESSAGES,
   INITIAL_THREADS,
 } from './mockData';
+import { chatApi } from './chatApi';
 
 const KEYS = {
   AUTH_SESSION: '@app_auth_session',
   THREADS: '@messages_threads',
   THREAD_MESSAGES_PREFIX: '@messages_thread_',
+  API_DIRECTORY: '@app_api_directory',
   SETTINGS: '@app_user_settings',
   SEEDED: '@app_seeded_v1',
 };
@@ -307,12 +309,15 @@ export const storageService = {
         threads.map((t) => t.contactName.toLowerCase())
       );
 
-      const newContacts = DIRECTORY_CONTACTS.filter(
-        (c) => !existingNames.has(c.contactName.toLowerCase())
-      ).map((c) => ({
-        ...c,
-        hasExistingThread: false,
-      }));
+      const dirRaw = await AsyncStorage.getItem(KEYS.API_DIRECTORY);
+      const directoryPool = dirRaw ? JSON.parse(dirRaw) : DIRECTORY_CONTACTS;
+
+      const newContacts = directoryPool
+        .filter((c) => !existingNames.has(c.contactName.toLowerCase()))
+        .map((c) => ({
+          ...c,
+          hasExistingThread: false,
+        }));
 
       const recentContacts = threads.map((t) => ({
         id: t.id,
@@ -360,8 +365,31 @@ export const storageService = {
     try {
       const isSeeded = await AsyncStorage.getItem(KEYS.SEEDED);
       if (!isSeeded || force) {
-        await AsyncStorage.setItem(KEYS.THREADS, JSON.stringify(INITIAL_THREADS));
-        for (const [threadId, msgs] of Object.entries(INITIAL_MESSAGES)) {
+        let threadsToSave = INITIAL_THREADS;
+        let messagesToSave = INITIAL_MESSAGES;
+        let directoryToSave = DIRECTORY_CONTACTS;
+
+        try {
+          const remote = await chatApi.fetchRemoteThreadsAndContacts();
+          if (remote.threads.length > 0) {
+            threadsToSave = remote.threads;
+            messagesToSave = remote.messagesByThread;
+            if (remote.directoryContacts.length > 0) {
+              directoryToSave = remote.directoryContacts;
+            }
+          }
+        } catch {
+          threadsToSave = INITIAL_THREADS;
+          messagesToSave = INITIAL_MESSAGES;
+          directoryToSave = DIRECTORY_CONTACTS;
+        }
+
+        await AsyncStorage.setItem(KEYS.THREADS, JSON.stringify(threadsToSave));
+        await AsyncStorage.setItem(
+          KEYS.API_DIRECTORY,
+          JSON.stringify(directoryToSave)
+        );
+        for (const [threadId, msgs] of Object.entries(messagesToSave)) {
           await AsyncStorage.setItem(
             `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`,
             JSON.stringify(msgs)
@@ -374,11 +402,46 @@ export const storageService = {
     }
   },
 
+  async syncWithRemoteApi() {
+    try {
+      const remote = await chatApi.fetchRemoteThreadsAndContacts();
+      const existingKeys = await AsyncStorage.getAllKeys();
+      const msgKeys = existingKeys.filter((k) => k.startsWith('@messages_'));
+      if (msgKeys.length > 0) {
+        await AsyncStorage.multiRemove(msgKeys);
+      }
+
+      await AsyncStorage.setItem(KEYS.THREADS, JSON.stringify(remote.threads));
+      await AsyncStorage.setItem(
+        KEYS.API_DIRECTORY,
+        JSON.stringify(remote.directoryContacts)
+      );
+      for (const [threadId, msgs] of Object.entries(remote.messagesByThread)) {
+        await AsyncStorage.setItem(
+          `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`,
+          JSON.stringify(msgs)
+        );
+      }
+      await AsyncStorage.setItem(KEYS.SEEDED, 'true');
+      return remote.threads;
+    } catch (error) {
+      console.error('Failed to sync from remote API:', error);
+      throw error;
+    }
+  },
+
   async resetAllData() {
     try {
       const keys = await AsyncStorage.getAllKeys();
-      const appKeys = keys.filter((k) => k.startsWith('@app_') || k.startsWith('@messages_'));
-      await AsyncStorage.multiRemove(appKeys);
+      const msgKeys = keys.filter(
+        (k) =>
+          k.startsWith('@messages_') ||
+          k === KEYS.SEEDED ||
+          k === KEYS.API_DIRECTORY
+      );
+      if (msgKeys.length > 0) {
+        await AsyncStorage.multiRemove(msgKeys);
+      }
       await this.seedInitialData(true);
     } catch (error) {
       console.error('Failed to reset data:', error);
