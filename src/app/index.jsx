@@ -482,8 +482,11 @@ export default function HomeScreen() {
                   )
                 }>
                 <View
-                  style={[styles.contactAvatar, { backgroundColor: theme.primary }]}>
-                  <User size={21} color="#FFFFFF" strokeWidth={2.1} />
+                  style={[
+                    styles.contactAvatar,
+                    { backgroundColor: theme.accentSurface },
+                  ]}>
+                  <User size={21} color={theme.accentOnSurface} strokeWidth={2.1} />
                 </View>
                 <View style={styles.contactMeta}>
                   <Text style={[styles.contactName, { color: theme.text }]}>

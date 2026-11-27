@@ -102,8 +102,12 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}>
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <View style={styles.avatarSection}>
-            <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-              <User size={34} color="#FFFFFF" strokeWidth={2} />
+            <View
+              style={[
+                styles.avatarCircle,
+                { backgroundColor: theme.accentSurface },
+              ]}>
+              <User size={34} color={theme.accentOnSurface} strokeWidth={2} />
             </View>
             <Text style={[styles.displayName, { color: theme.text }]}>
               {user?.name || 'User'}
