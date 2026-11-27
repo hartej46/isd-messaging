@@ -5,6 +5,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 
 const WAVE_BARS = [8, 16, 12, 22, 14, 20, 10, 18, 13, 9];
+const EMOJI_ONLY_REGEX = /^[\p{Extended_Pictographic}\u200D\uFE0F\s]+$/u;
+
+function checkEmojiOnly(text) {
+  const trimmed = (text || '').trim();
+  if (!trimmed || trimmed.length > 8) return false;
+  return EMOJI_ONLY_REGEX.test(trimmed);
+}
 
 function RichAttachmentContent({ text, isMe, theme }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -54,13 +61,13 @@ function RichAttachmentContent({ text, isMe, theme }) {
             {
               backgroundColor: isMe
                 ? 'rgba(255,255,255,0.2)'
-                : `${theme.success}20`,
+                : `${theme.primary}20`,
             },
           ]}>
           <Ionicons
             name="location"
             size={20}
-            color={isMe ? '#FFFFFF' : theme.success}
+            color={isMe ? '#FFFFFF' : theme.primary}
           />
         </View>
         <View style={styles.locationMeta}>
@@ -152,125 +159,73 @@ function RichAttachmentContent({ text, isMe, theme }) {
 export function MessageBubble({
   message,
   isLastInGroup = true,
-  showDateBanner = false,
-  dateBannerText = 'Today',
   onLongPress,
 }) {
   const theme = useTheme();
   const isMe = message.sender === 'me';
-
-  const statusLabel =
-    message.status === 'read'
-      ? 'Read'
-      : message.status === 'delivered'
-        ? 'Delivered'
-        : 'Sent';
+  const isEmojiOnly = checkEmojiOnly(message.text);
 
   return (
-    <View style={styles.wrapper}>
-      {showDateBanner ? (
-        <View style={styles.dateBannerRow}>
-          <View
-            style={[
-              styles.dateBannerPill,
-              { backgroundColor: theme.backgroundElement },
-            ]}>
-            <Text style={[styles.dateBannerText, { color: theme.textSecondary }]}>
-              {dateBannerText}
-            </Text>
-          </View>
+    <View
+      style={[
+        styles.row,
+        isMe ? styles.rowOutgoing : styles.rowIncoming,
+        isLastInGroup ? styles.groupEndSpacing : styles.groupedSpacing,
+      ]}>
+      {isMe && isLastInGroup ? (
+        <View style={styles.metaContainer}>
+          <Text style={[styles.timestamp, { color: theme.textTertiary }]}>
+            {message.timestamp}
+          </Text>
         </View>
       ) : null}
 
-      <View
-        style={[
-          styles.row,
-          isMe ? styles.rowOutgoing : styles.rowIncoming,
-          !isLastInGroup && styles.groupedSpacing,
+      <Pressable
+        onLongPress={() => onLongPress && onLongPress(message)}
+        delayLongPress={350}
+        style={({ pressed }) => [
+          isEmojiOnly
+            ? styles.emojiContainer
+            : [
+                styles.bubble,
+                {
+                  backgroundColor: isMe
+                    ? theme.outgoingBubble
+                    : theme.incomingBubble,
+                },
+              ],
+          pressed && { opacity: 0.85 },
         ]}>
-
-        {isMe && isLastInGroup ? (
-          <View style={[styles.metaContainer, styles.metaOutgoing]}>
-            <View style={styles.statusRow}>
-              <Ionicons
-                name={message.status === 'read' ? 'checkmark-done' : 'checkmark'}
-                size={11}
-                color={message.status === 'read' ? theme.primary : theme.textTertiary}
-              />
-              <Text style={[styles.statusText, { color: theme.textTertiary }]}>
-                {statusLabel}
-              </Text>
-            </View>
-            <Text style={[styles.timestamp, { color: theme.textTertiary }]}>
-              {message.timestamp}
-            </Text>
-          </View>
-        ) : null}
-
-        <Pressable
-          onLongPress={() => onLongPress && onLongPress(message)}
-          delayLongPress={350}
-          style={({ pressed }) => [
-            styles.bubble,
-            isMe
-              ? [
-                  styles.bubbleOutgoing,
-                  {
-                    backgroundColor: theme.outgoingBubble,
-                    borderBottomRightRadius: isLastInGroup ? 5 : BorderRadius.bubble,
-                  },
-                ]
-              : [
-                  styles.bubbleIncoming,
-                  {
-                    backgroundColor: theme.incomingBubble,
-                    borderBottomLeftRadius: isLastInGroup ? 5 : BorderRadius.bubble,
-                  },
-                ],
-            pressed && { opacity: 0.85 },
-          ]}>
+        {isEmojiOnly ? (
+          <Text style={styles.emojiOnlyText}>{message.text.trim()}</Text>
+        ) : (
           <RichAttachmentContent text={message.text} isMe={isMe} theme={theme} />
-        </Pressable>
+        )}
+      </Pressable>
 
-        {!isMe && isLastInGroup ? (
-          <View style={[styles.metaContainer, styles.metaIncoming]}>
-            <Text style={[styles.timestamp, { color: theme.textTertiary }]}>
-              {message.timestamp}
-            </Text>
-          </View>
-        ) : null}
-      </View>
+      {!isMe && isLastInGroup ? (
+        <View style={styles.metaContainer}>
+          <Text style={[styles.timestamp, { color: theme.textTertiary }]}>
+            {message.timestamp}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    width: '100%',
-  },
-  dateBannerRow: {
-    alignItems: 'center',
-    marginVertical: Spacing.three,
-  },
-  dateBannerPill: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.pill,
-  },
-  dateBannerText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    marginBottom: Spacing.two,
     paddingHorizontal: Spacing.three,
     gap: 6,
   },
   groupedSpacing: {
     marginBottom: 4,
+  },
+  groupEndSpacing: {
+    marginBottom: 14,
   },
   rowOutgoing: {
     justifyContent: 'flex-end',
@@ -279,24 +234,22 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   bubble: {
-    maxWidth: '75%',
+    maxWidth: '72%',
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: BorderRadius.bubble,
+    paddingVertical: 9,
+    borderRadius: 20,
   },
-  bubbleOutgoing: {
-    borderTopRightRadius: BorderRadius.bubble,
-    borderTopLeftRadius: BorderRadius.bubble,
-    borderBottomLeftRadius: BorderRadius.bubble,
+  emojiContainer: {
+    paddingHorizontal: 4,
+    paddingVertical: 2,
   },
-  bubbleIncoming: {
-    borderTopLeftRadius: BorderRadius.bubble,
-    borderTopRightRadius: BorderRadius.bubble,
-    borderBottomRightRadius: BorderRadius.bubble,
+  emojiOnlyText: {
+    fontSize: 48,
+    lineHeight: 56,
   },
   messageText: {
     fontSize: 15,
-    lineHeight: 21,
+    lineHeight: 20,
   },
   attachmentCard: {
     width: 190,
@@ -368,23 +321,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
     paddingBottom: 2,
   },
-  metaOutgoing: {
-    alignItems: 'flex-end',
-  },
-  metaIncoming: {
-    alignItems: 'flex-start',
-  },
-  statusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
   timestamp: {
-    fontSize: 10,
-    fontWeight: '500',
+    fontSize: 11,
+    fontWeight: '400',
   },
 });

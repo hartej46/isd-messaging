@@ -8,8 +8,7 @@ import { SquircleAvatar } from './SquircleAvatar';
 export function ChatHeader({
   thread,
   onBack,
-  onCallPress,
-  onVideoPress,
+  onTitlePress,
   onMenuPress,
 }) {
   const theme = useTheme();
@@ -32,60 +31,50 @@ export function ChatHeader({
             pressed && { backgroundColor: theme.backgroundElement },
           ]}
           accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={23} color={theme.text} />
+          <Ionicons name="chevron-back" size={26} color={theme.text} />
         </Pressable>
 
         {thread ? (
-          <View style={styles.contactRow}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.contactRow,
+              pressed && { opacity: 0.75 },
+            ]}
+            onPress={onTitlePress || onMenuPress}
+            accessibilityLabel="Conversation details">
             <SquircleAvatar
               initials={thread.contactName}
-              size={38}
+              size={36}
               backgroundColor={thread.avatarColor}
+              style={styles.circularAvatar}
             />
-            <View style={styles.contactText}>
-              <Text style={[styles.contactName, { color: theme.text }]} numberOfLines={1}>
+            <View style={styles.nameDropdownRow}>
+              <Text
+                style={[styles.contactName, { color: theme.text }]}
+                numberOfLines={1}>
                 {thread.contactName}
               </Text>
-              <Text style={[styles.contactSub, { color: theme.textSecondary }]} numberOfLines={1}>
-                {thread.phoneNumber || 'SMS'}
-              </Text>
+              <Ionicons
+                name="chevron-down"
+                size={16}
+                color={theme.textSecondary}
+                style={styles.dropdownChevron}
+              />
             </View>
-          </View>
+          </Pressable>
         ) : null}
       </View>
 
-      <View style={styles.rightGroup}>
-        <Pressable
-          onPress={onCallPress}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            pressed && { backgroundColor: theme.backgroundElement },
-          ]}
-          accessibilityLabel="Audio call">
-          <Ionicons name="call-outline" size={20} color={theme.text} />
-        </Pressable>
-        <Pressable
-          onPress={onVideoPress}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            pressed && { backgroundColor: theme.backgroundElement },
-          ]}
-          accessibilityLabel="Video call">
-          <Ionicons name="videocam-outline" size={22} color={theme.text} />
-        </Pressable>
-        <Pressable
-          onPress={onMenuPress}
-          hitSlop={8}
-          style={({ pressed }) => [
-            styles.actionBtn,
-            pressed && { backgroundColor: theme.backgroundElement },
-          ]}
-          accessibilityLabel="More thread options">
-          <Ionicons name="ellipsis-vertical" size={19} color={theme.text} />
-        </Pressable>
-      </View>
+      <Pressable
+        onPress={onMenuPress}
+        hitSlop={10}
+        style={({ pressed }) => [
+          styles.menuBtn,
+          pressed && { backgroundColor: theme.backgroundElement },
+        ]}
+        accessibilityLabel="More thread options">
+        <Ionicons name="ellipsis-vertical" size={20} color={theme.text} />
+      </Pressable>
     </View>
   );
 }
@@ -96,18 +85,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.two,
-    borderBottomWidth: 1,
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
   },
   leftGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: Spacing.one,
+    gap: 4,
   },
   backBtn: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: BorderRadius.pill,
     justifyContent: 'center',
     alignItems: 'center',
@@ -116,29 +105,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    gap: Spacing.two + 2,
+    gap: 10,
   },
-  contactText: {
-    flex: 1,
-    marginRight: Spacing.two,
+  circularAvatar: {
+    borderRadius: 18,
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  contactName: {
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: -0.3,
-  },
-  contactSub: {
-    fontSize: 12,
-    marginTop: 1,
-  },
-  rightGroup: {
+  nameDropdownRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    flex: 1,
+    paddingRight: Spacing.two,
   },
-  actionBtn: {
-    width: 36,
-    height: 36,
+  contactName: {
+    fontSize: 19,
+    fontWeight: '500',
+    letterSpacing: -0.3,
+    flexShrink: 1,
+  },
+  dropdownChevron: {
+    marginLeft: 5,
+    marginTop: 2,
+  },
+  menuBtn: {
+    width: 38,
+    height: 38,
     borderRadius: BorderRadius.pill,
     justifyContent: 'center',
     alignItems: 'center',
