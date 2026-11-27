@@ -15,6 +15,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
+import { chatApi } from '@/services/chatApi';
 import { AVATAR_COLORS } from '@/services/mockData';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from '@/components/one-ui/SquircleAvatar';
@@ -139,6 +140,7 @@ export default function ComposeScreen() {
       };
 
       await storageService.saveMessage(matchedThread.id, newMessage);
+      chatApi.postSimulatedMessage(cleanText);
       router.replace(`/chat/${matchedThread.id}`);
     } catch (err) {
       console.error('Failed to create message thread:', err);

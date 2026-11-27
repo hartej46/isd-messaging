@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { useSettings } from '@/context/SettingsContext';
 import { storageService } from '@/services/storage';
+import { chatApi } from '@/services/chatApi';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { ChatHeader } from '@/components/one-ui/ChatHeader';
 import { MessageBubble } from '@/components/one-ui/MessageBubble';
@@ -138,6 +139,8 @@ export default function ChatThreadScreen() {
       if (!isMountedRef.current) return;
       setMessages(updated);
 
+      chatApi.postSimulatedMessage(cleanText);
+
       const scrollTimer = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 60);
@@ -170,6 +173,10 @@ export default function ChatThreadScreen() {
           if (!isMountedRef.current) return;
           await storageService.updateMessageStatus(threadId, newMessage.id, 'read');
 
+          const remoteReply = await chatApi.fetchRandomReply();
+          const replyText =
+            remoteReply || pickContextualReply(cleanText, thread?.contactName || '');
+
           const replyTime = new Date().toLocaleTimeString([], {
             hour: '2-digit',
             minute: '2-digit',
@@ -177,7 +184,7 @@ export default function ChatThreadScreen() {
           const replyMsg = {
             id: `msg_reply_${Date.now()}`,
             threadId,
-            text: pickContextualReply(cleanText, thread?.contactName || ''),
+            text: replyText,
             sender: 'them',
             timestamp: replyTime,
             status: 'read',
