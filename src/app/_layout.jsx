@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { hideAsync, preventAutoHideAsync } from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import {
   DarkTheme,
   DefaultTheme,
@@ -8,9 +9,9 @@ import {
   useRouter,
   useSegments,
 } from 'expo-router';
-import { useColorScheme } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 
 preventAutoHideAsync();
 
@@ -43,19 +44,30 @@ function NavigationProtector() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="compose" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="explore" options={{ headerShown: false }} />
     </Stack>
   );
 }
 
-export default function RootLayout() {
-  const colorScheme = useColorScheme();
+function RootThemeShell() {
+  const settingsContext = useSettings();
+  const isDark = settingsContext?.resolvedColorScheme === 'dark';
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <AuthProvider>
         <NavigationProtector />
       </AuthProvider>
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <SettingsProvider>
+      <RootThemeShell />
+    </SettingsProvider>
   );
 }
