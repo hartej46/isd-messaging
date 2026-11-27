@@ -1,10 +1,16 @@
 import React from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Search, X } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 
-export function SearchBar({ value, onChangeText, onClear, placeholder = 'Search messages...' }) {
+export function SearchBar({
+  value,
+  onChangeText,
+  onClear,
+  placeholder = 'Search messages...',
+  autoFocus = false,
+}) {
   const theme = useTheme();
 
   return (
@@ -12,29 +18,25 @@ export function SearchBar({ value, onChangeText, onClear, placeholder = 'Search 
       style={[
         styles.container,
         {
-          backgroundColor: theme.inputBackground,
-          borderColor: theme.inputBorder,
+          backgroundColor: theme.card,
+          borderColor: theme.border,
         },
       ]}>
-      <Ionicons
-        name="search-outline"
-        size={19}
-        color={theme.textTertiary}
-        style={styles.searchIcon}
-      />
+      <Search size={18} color={theme.textTertiary} style={styles.searchIcon} />
       <TextInput
         style={[styles.input, { color: theme.text }]}
         placeholder={placeholder}
         placeholderTextColor={theme.textTertiary}
         value={value}
         onChangeText={onChangeText}
+        autoFocus={autoFocus}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
       />
       {value && value.length > 0 ? (
         <Pressable onPress={onClear} hitSlop={8} style={styles.clearBtn}>
-          <Ionicons name="close-circle" size={18} color={theme.textTertiary} />
+          <X size={18} color={theme.textTertiary} />
         </Pressable>
       ) : null}
     </View>
@@ -45,7 +47,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 46,
+    height: 44,
     borderRadius: BorderRadius.pill,
     paddingHorizontal: Spacing.three,
     borderWidth: 1,

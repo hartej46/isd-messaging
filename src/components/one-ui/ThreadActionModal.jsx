@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Mail, MailOpen, Pin, Trash2 } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from './SquircleAvatar';
@@ -33,12 +33,11 @@ export function ThreadActionModal({
             },
           ]}
           onPress={(e) => e.stopPropagation()}>
-
           <View style={styles.headerRow}>
             <SquircleAvatar
               initials={thread.contactName}
               size={44}
-              backgroundColor={thread.avatarColor}
+              backgroundColor={theme.primary}
             />
             <View style={styles.headerInfo}>
               <Text style={[styles.contactName, { color: theme.text }]}>
@@ -53,7 +52,6 @@ export function ThreadActionModal({
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
 
           <View style={styles.actionsList}>
-
             <Pressable
               style={({ pressed }) => [
                 styles.actionItem,
@@ -63,10 +61,9 @@ export function ThreadActionModal({
                 onTogglePin(thread.id);
                 onClose();
               }}>
-              <Ionicons
-                name={thread.isPinned ? 'pin' : 'pin-outline'}
-                size={20}
-                color={thread.isPinned ? theme.pinned : theme.text}
+              <Pin
+                size={19}
+                color={thread.isPinned ? theme.primary : theme.text}
               />
               <Text style={[styles.actionLabel, { color: theme.text }]}>
                 {thread.isPinned ? 'Unpin conversation' : 'Pin to top'}
@@ -82,15 +79,11 @@ export function ThreadActionModal({
                 onToggleRead(thread.id);
                 onClose();
               }}>
-              <Ionicons
-                name={
-                  thread.unreadCount > 0
-                    ? 'mail-open-outline'
-                    : 'mail-unread-outline'
-                }
-                size={20}
-                color={theme.text}
-              />
+              {thread.unreadCount > 0 ? (
+                <MailOpen size={19} color={theme.text} />
+              ) : (
+                <Mail size={19} color={theme.text} />
+              )}
               <Text style={[styles.actionLabel, { color: theme.text }]}>
                 {thread.unreadCount > 0 ? 'Mark as read' : 'Mark as unread'}
               </Text>
@@ -105,7 +98,7 @@ export function ThreadActionModal({
                 onDelete(thread.id);
                 onClose();
               }}>
-              <Ionicons name="trash-outline" size={20} color={theme.danger} />
+              <Trash2 size={19} color={theme.danger} />
               <Text style={[styles.actionLabel, { color: theme.danger }]}>
                 Delete conversation
               </Text>

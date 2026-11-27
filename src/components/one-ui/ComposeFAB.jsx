@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MessageSquarePlus } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 
@@ -12,8 +12,8 @@ export function ComposeFAB({ onPress }) {
       style={({ pressed }) => [
         styles.fab,
         {
-          backgroundColor: theme.primary,
-          shadowColor: theme.primary,
+          backgroundColor: theme.card,
+          borderColor: theme.borderLight,
           opacity: pressed ? 0.9 : 1,
           transform: [{ scale: pressed ? 0.94 : 1 }],
         },
@@ -21,7 +21,7 @@ export function ComposeFAB({ onPress }) {
       onPress={onPress}
       accessibilityLabel="Compose new message"
       accessibilityRole="button">
-      <Ionicons name="create-outline" size={26} color="#FFFFFF" />
+      <MessageSquarePlus size={25} color={theme.primary} strokeWidth={2.1} />
     </Pressable>
   );
 }
@@ -30,16 +30,18 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: Spacing.four,
-    bottom: Spacing.five,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    bottom: 68,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 0.5,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 6,
     zIndex: 999,
   },
 });

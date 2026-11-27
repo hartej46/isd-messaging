@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { CheckCheck, LogOut, RefreshCw, Settings } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 
@@ -45,7 +45,7 @@ export function OverflowMenuModal({
               onOpenSettings();
               onClose();
             }}>
-            <Ionicons name="settings-outline" size={20} color={theme.text} />
+            <Settings size={18} color={theme.text} />
             <Text style={[styles.menuItemText, { color: theme.text }]}>
               Settings
             </Text>
@@ -60,7 +60,7 @@ export function OverflowMenuModal({
               onMarkAllRead();
               onClose();
             }}>
-            <Ionicons name="checkmark-done-outline" size={20} color={theme.primary} />
+            <CheckCheck size={18} color={theme.primary} />
             <Text style={[styles.menuItemText, { color: theme.text }]}>
               Mark all as read
             </Text>
@@ -75,7 +75,7 @@ export function OverflowMenuModal({
               onResetData();
               onClose();
             }}>
-            <Ionicons name="refresh-outline" size={20} color={theme.text} />
+            <RefreshCw size={18} color={theme.text} />
             <Text style={[styles.menuItemText, { color: theme.text }]}>
               Reset demo conversations
             </Text>
@@ -92,7 +92,7 @@ export function OverflowMenuModal({
               onSignOut();
               onClose();
             }}>
-            <Ionicons name="log-out-outline" size={20} color={theme.danger} />
+            <LogOut size={18} color={theme.danger} />
             <Text style={[styles.menuItemText, { color: theme.danger }]}>
               Sign out
             </Text>

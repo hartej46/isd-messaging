@@ -1,31 +1,37 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Pin, User } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
-import { BorderRadius, Spacing } from '@/constants/theme';
-import { SquircleAvatar } from './SquircleAvatar';
+import { Spacing } from '@/constants/theme';
 
-export function ConversationItem({ thread, onPress, onLongPress }) {
+export function ConversationItem({
+  thread,
+  isFirst = false,
+  isLast = false,
+  onPress,
+  onLongPress,
+}) {
   const theme = useTheme();
 
   return (
     <Pressable
       style={({ pressed }) => [
-        styles.card,
+        styles.row,
         {
           backgroundColor: pressed ? theme.backgroundSelected : theme.card,
-          borderColor: theme.border,
-          opacity: pressed ? 0.92 : 1,
+          borderTopLeftRadius: isFirst ? 26 : 0,
+          borderTopRightRadius: isFirst ? 26 : 0,
+          borderBottomLeftRadius: isLast ? 26 : 0,
+          borderBottomRightRadius: isLast ? 26 : 0,
         },
       ]}
       onPress={() => onPress(thread)}
       onLongPress={() => onLongPress(thread)}
       delayLongPress={350}>
-      <SquircleAvatar
-        initials={thread.contactName}
-        size={50}
-        backgroundColor={thread.avatarColor}
-      />
+      <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
+        <User size={22} color="#FFFFFF" strokeWidth={2.1} />
+      </View>
+
       <View style={styles.content}>
         <View style={styles.topRow}>
           <View style={styles.nameRow}>
@@ -34,27 +40,22 @@ export function ConversationItem({ thread, onPress, onLongPress }) {
                 styles.name,
                 {
                   color: theme.text,
-                  fontWeight: thread.unreadCount > 0 ? '800' : '600',
+                  fontWeight: thread.unreadCount > 0 ? '700' : '600',
                 },
               ]}
               numberOfLines={1}>
               {thread.contactName}
             </Text>
-            {thread.isPinned && (
-              <Ionicons
-                name="pin"
-                size={14}
-                color={theme.pinned}
-                style={styles.pinIcon}
-              />
-            )}
+            {thread.isPinned ? (
+              <Pin size={13} color={theme.primary} strokeWidth={2.2} />
+            ) : null}
           </View>
           <Text
             style={[
               styles.timestamp,
               {
                 color: thread.unreadCount > 0 ? theme.primary : theme.textTertiary,
-                fontWeight: thread.unreadCount > 0 ? '700' : '500',
+                fontWeight: thread.unreadCount > 0 ? '700' : '400',
               },
             ]}>
             {thread.timestamp}
@@ -70,10 +71,10 @@ export function ConversationItem({ thread, onPress, onLongPress }) {
                 fontWeight: thread.unreadCount > 0 ? '600' : '400',
               },
             ]}
-            numberOfLines={1}>
+            numberOfLines={2}>
             {thread.lastMessage}
           </Text>
-          {thread.unreadCount > 0 && (
+          {thread.unreadCount > 0 ? (
             <View
               style={[
                 styles.unreadBadge,
@@ -83,7 +84,7 @@ export function ConversationItem({ thread, onPress, onLongPress }) {
                 {thread.unreadCount > 99 ? '99+' : thread.unreadCount}
               </Text>
             </View>
-          )}
+          ) : null}
         </View>
       </View>
     </Pressable>
@@ -91,15 +92,19 @@ export function ConversationItem({ thread, onPress, onLongPress }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    marginBottom: Spacing.two,
-    gap: Spacing.three,
+    paddingHorizontal: Spacing.three + 2,
+    paddingVertical: 13,
+    gap: 14,
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -109,21 +114,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
     marginRight: Spacing.two,
-    gap: 4,
+    gap: 5,
   },
   name: {
     fontSize: 16,
-    letterSpacing: -0.3,
-  },
-  pinIcon: {
-    marginLeft: 2,
+    letterSpacing: -0.2,
+    flexShrink: 1,
   },
   timestamp: {
     fontSize: 12,
@@ -131,13 +134,13 @@ const styles = StyleSheet.create({
   bottomRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   preview: {
-    fontSize: 14,
+    fontSize: 13.5,
     flex: 1,
     marginRight: Spacing.two,
-    lineHeight: 19,
+    lineHeight: 18,
   },
   unreadBadge: {
     minWidth: 20,
@@ -146,6 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 6,
+    marginTop: 2,
   },
   unreadBadgeText: {
     color: '#FFFFFF',
