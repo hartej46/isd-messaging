@@ -41,7 +41,8 @@ function NavigationProtector() {
         animation: 'slide_from_right',
       }}>
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ headerShown: false, animation: 'none' }} />
+      <Stack.Screen name="profile" options={{ headerShown: false, animation: 'none' }} />
       <Stack.Screen name="compose" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
