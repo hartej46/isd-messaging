@@ -14,6 +14,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/use-theme';
+import { useSettings } from '@/context/SettingsContext';
 import { storageService } from '@/services/storage';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { ChatHeader } from '@/components/one-ui/ChatHeader';
@@ -53,6 +54,8 @@ function pickContextualReply(outgoingText, contactName) {
 
 export default function ChatThreadScreen() {
   const theme = useTheme();
+  const settingsContext = useSettings();
+  const isDark = settingsContext?.resolvedColorScheme === 'dark';
   const { id } = useLocalSearchParams();
   const threadId = Array.isArray(id) ? id[0] : id;
 
@@ -290,23 +293,16 @@ export default function ChatThreadScreen() {
         <ChatHeader
           thread={thread}
           onBack={() => router.back()}
-          onCallPress={() =>
-            Alert.alert(
-              'Voice Call',
-              `Simulated call to ${thread?.contactName || 'contact'} (${thread?.phoneNumber || 'SMS'}).`
-            )
-          }
-          onVideoPress={() =>
-            Alert.alert(
-              'Video Call',
-              `Simulated video call to ${thread?.contactName || 'contact'}.`
-            )
-          }
+          onTitlePress={() => setOptionsVisible(true)}
           onMenuPress={() => setOptionsVisible(true)}
         />
 
         {loading ? (
-          <View style={styles.centerState}>
+          <View
+            style={[
+              styles.centerState,
+              { backgroundColor: isDark ? theme.background : theme.cardSubtle },
+            ]}>
             <ActivityIndicator size="large" color={theme.primary} />
             <Text style={[styles.stateText, { color: theme.textSecondary }]}>
               Loading conversation...
@@ -317,24 +313,21 @@ export default function ChatThreadScreen() {
             ref={flatListRef}
             data={messages}
             keyExtractor={(item) => item.id}
+            style={{ backgroundColor: isDark ? theme.background : theme.cardSubtle }}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
             renderItem={({ item, index }) => {
               const nextMsg = messages[index + 1];
-              const isLastInGroup = !nextMsg || nextMsg.sender !== item.sender;
-              const showDateBanner = index === 0;
+              const isLastInGroup =
+                !nextMsg ||
+                nextMsg.sender !== item.sender ||
+                nextMsg.timestamp !== item.timestamp;
 
               return (
                 <MessageBubble
                   message={item}
                   isLastInGroup={isLastInGroup}
-                  showDateBanner={showDateBanner}
-                  dateBannerText={
-                    thread?.category === 'business'
-                      ? 'Verified SMS Thread'
-                      : 'Conversation History'
-                  }
                   onLongPress={handleMessageLongPress}
                 />
               );
@@ -407,7 +400,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    paddingTop: Spacing.two,
+    paddingTop: Spacing.three,
     paddingBottom: Spacing.three,
     flexGrow: 1,
   },

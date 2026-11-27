@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -18,9 +18,22 @@ const QUICK_REPLIES = [
   'Running 5 mins late',
 ];
 
+function WaveformIcon({ color }) {
+  return (
+    <View style={styles.waveIconBox}>
+      <View style={[styles.waveIconBar, { height: 6, backgroundColor: color }]} />
+      <View style={[styles.waveIconBar, { height: 14, backgroundColor: color }]} />
+      <View style={[styles.waveIconBar, { height: 20, backgroundColor: color }]} />
+      <View style={[styles.waveIconBar, { height: 12, backgroundColor: color }]} />
+      <View style={[styles.waveIconBar, { height: 7, backgroundColor: color }]} />
+    </View>
+  );
+}
+
 export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
   const theme = useTheme();
   const [trayOpen, setTrayOpen] = useState(false);
+  const inputRef = useRef(null);
 
   const hasText = value.trim().length > 0;
 
@@ -34,11 +47,10 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
       style={[
         styles.container,
         {
-          backgroundColor: theme.card,
+          backgroundColor: theme.background,
           borderTopColor: theme.borderLight,
         },
       ]}>
-
       {trayOpen ? (
         <View
           style={[
@@ -50,8 +62,8 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               style={styles.attachmentItem}
               onPress={() => handleQuickOption('[Photo attachment]')}>
               <View
-                style={[styles.attachmentIcon, { backgroundColor: '#E11D4818' }]}>
-                <Ionicons name="image-outline" size={20} color="#E11D48" />
+                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name="image-outline" size={20} color={theme.primary} />
               </View>
               <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
                 Gallery
@@ -62,8 +74,8 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               style={styles.attachmentItem}
               onPress={() => handleQuickOption('[Shared current location]')}>
               <View
-                style={[styles.attachmentIcon, { backgroundColor: '#05966918' }]}>
-                <Ionicons name="location-outline" size={20} color="#059669" />
+                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name="location-outline" size={20} color={theme.primary} />
               </View>
               <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
                 Location
@@ -74,8 +86,8 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               style={styles.attachmentItem}
               onPress={() => handleQuickOption('[Voice message 0:08]')}>
               <View
-                style={[styles.attachmentIcon, { backgroundColor: '#7C3AED18' }]}>
-                <Ionicons name="mic-outline" size={20} color="#7C3AED" />
+                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name="mic-outline" size={20} color={theme.primary} />
               </View>
               <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
                 Voice
@@ -86,8 +98,8 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               style={styles.attachmentItem}
               onPress={() => handleQuickOption('Let us schedule a time to catch up.')}>
               <View
-                style={[styles.attachmentIcon, { backgroundColor: '#2563EB18' }]}>
-                <Ionicons name="calendar-outline" size={20} color="#2563EB" />
+                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
+                <Ionicons name="calendar-outline" size={20} color={theme.primary} />
               </View>
               <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
                 Schedule
@@ -126,18 +138,38 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
       <View style={styles.barRow}>
         <Pressable
           style={({ pressed }) => [
-            styles.plusBtn,
-            {
-              backgroundColor: trayOpen ? theme.primary : theme.backgroundElement,
-              opacity: pressed ? 0.8 : 1,
-            },
+            styles.leftIconBtn,
+            pressed && { opacity: 0.6 },
+          ]}
+          onPress={() => handleQuickOption('[Photo attachment]')}
+          hitSlop={6}
+          accessibilityLabel="Attach photo from gallery">
+          <Ionicons name="image-outline" size={24} color={theme.text} />
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.leftIconBtn,
+            pressed && { opacity: 0.6 },
+          ]}
+          onPress={() => handleQuickOption('[Photo attachment]')}
+          hitSlop={6}
+          accessibilityLabel="Take photo with camera">
+          <Ionicons name="camera-outline" size={25} color={theme.text} />
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.leftIconBtn,
+            pressed && { opacity: 0.6 },
           ]}
           onPress={() => setTrayOpen((prev) => !prev)}
-          accessibilityLabel="Toggle attachments and quick replies">
+          hitSlop={6}
+          accessibilityLabel="More attachments">
           <Ionicons
             name={trayOpen ? 'close' : 'add'}
-            size={22}
-            color={trayOpen ? '#FFFFFF' : theme.text}
+            size={28}
+            color={trayOpen ? theme.primary : theme.text}
           />
         </Pressable>
 
@@ -146,12 +178,12 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
             styles.inputPill,
             {
               backgroundColor: theme.inputBackground,
-              borderColor: theme.inputBorder,
             },
           ]}>
           <TextInput
+            ref={inputRef}
             style={[styles.textInput, { color: theme.text }]}
-            placeholder="Text message"
+            placeholder="Message"
             placeholderTextColor={theme.textTertiary}
             value={value}
             onChangeText={onChangeText}
@@ -159,29 +191,48 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
             maxLength={1000}
           />
 
-          {hasText ? (
-            <Pressable
-              style={({ pressed }) => [
-                styles.sendBtn,
-                {
-                  backgroundColor: theme.primary,
-                  opacity: isSending ? 0.6 : pressed ? 0.85 : 1,
-                },
-              ]}
-              disabled={isSending}
-              onPress={() => onSend(value)}
-              accessibilityLabel="Send message">
-              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
-            </Pressable>
-          ) : (
-            <Pressable
-              style={styles.micBtn}
-              onPress={() => setTrayOpen((prev) => !prev)}
-              accessibilityLabel="Voice or quick attachments">
-              <Ionicons name="mic-outline" size={20} color={theme.textSecondary} />
-            </Pressable>
-          )}
+          <Pressable
+            style={({ pressed }) => [
+              styles.smileyBtn,
+              pressed && { opacity: 0.65 },
+            ]}
+            onPress={() => setTrayOpen((prev) => !prev)}
+            hitSlop={6}
+            accessibilityLabel="Quick replies and expressions">
+            <Ionicons
+              name="happy-outline"
+              size={22}
+              color={trayOpen ? theme.primary : theme.text}
+            />
+          </Pressable>
         </View>
+
+        {hasText ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.sendBtn,
+              {
+                backgroundColor: theme.primary,
+                opacity: isSending ? 0.6 : pressed ? 0.85 : 1,
+              },
+            ]}
+            disabled={isSending}
+            onPress={() => onSend(value)}
+            accessibilityLabel="Send message">
+            <Ionicons name="arrow-up" size={19} color="#FFFFFF" />
+          </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.rightVoiceBtn,
+              pressed && { opacity: 0.6 },
+            ]}
+            onPress={() => handleQuickOption('[Voice message 0:08]')}
+            hitSlop={6}
+            accessibilityLabel="Send voice message">
+            <WaveformIcon color={theme.text} />
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -189,9 +240,9 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
 const styles = StyleSheet.create({
   container: {
-    borderTopWidth: 1,
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+    borderTopWidth: 0.5,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
   },
   trayContainer: {
     borderRadius: BorderRadius.card,
@@ -243,12 +294,11 @@ const styles = StyleSheet.create({
   barRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: Spacing.two,
+    gap: 8,
   },
-  plusBtn: {
-    width: 42,
+  leftIconBtn: {
+    width: 32,
     height: 42,
-    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -257,9 +307,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderRadius: 22,
-    borderWidth: 1,
-    paddingLeft: Spacing.three,
-    paddingRight: 5,
+    paddingLeft: 16,
+    paddingRight: 8,
     paddingVertical: 4,
     minHeight: 42,
   },
@@ -270,19 +319,34 @@ const styles = StyleSheet.create({
     paddingTop: 7,
     paddingBottom: 7,
   },
-  sendBtn: {
-    width: 34,
+  smileyBtn: {
+    width: 32,
     height: 34,
-    borderRadius: 17,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 1,
   },
-  micBtn: {
-    width: 34,
-    height: 34,
+  sendBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 1,
+    marginBottom: 3,
+  },
+  rightVoiceBtn: {
+    width: 36,
+    height: 42,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  waveIconBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2.5,
+  },
+  waveIconBar: {
+    width: 2,
+    borderRadius: 1,
   },
 });
