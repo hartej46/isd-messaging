@@ -385,4 +385,37 @@ export const storageService = {
       throw error;
     }
   },
+
+  async clearAllThreadsAndMessages() {
+    try {
+      const keys = await AsyncStorage.getAllKeys();
+      const msgKeys = keys.filter((k) => k.startsWith('@messages_'));
+      await AsyncStorage.multiRemove(msgKeys);
+      await AsyncStorage.setItem(KEYS.THREADS, JSON.stringify([]));
+      await AsyncStorage.setItem(KEYS.SEEDED, 'true');
+    } catch (error) {
+      console.error('Failed to clear all threads:', error);
+      throw error;
+    }
+  },
+
+  async getStorageStats() {
+    try {
+      const threads = await this.getThreads();
+      let totalMessages = 0;
+      await Promise.all(
+        threads.map(async (t) => {
+          const msgs = await this.getMessages(t.id);
+          totalMessages += msgs.length;
+        })
+      );
+      return {
+        threadCount: threads.length,
+        messageCount: totalMessages,
+      };
+    } catch (error) {
+      console.error('Failed to get storage stats:', error);
+      return { threadCount: 0, messageCount: 0 };
+    }
+  },
 };
