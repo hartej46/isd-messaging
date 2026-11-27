@@ -7,6 +7,7 @@ import { BorderRadius, Spacing } from '@/constants/theme';
 export function OverflowMenuModal({
   visible,
   onClose,
+  onOpenSettings,
   onMarkAllRead,
   onResetData,
   onSignOut,
@@ -34,6 +35,21 @@ export function OverflowMenuModal({
               OPTIONS
             </Text>
           </View>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.menuItem,
+              pressed && { backgroundColor: theme.backgroundElement },
+            ]}
+            onPress={() => {
+              onOpenSettings();
+              onClose();
+            }}>
+            <Ionicons name="settings-outline" size={20} color={theme.text} />
+            <Text style={[styles.menuItemText, { color: theme.text }]}>
+              Settings
+            </Text>
+          </Pressable>
 
           <Pressable
             style={({ pressed }) => [

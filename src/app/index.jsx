@@ -247,6 +247,16 @@ export default function HomeScreen() {
                 styles.iconBtn,
                 { backgroundColor: theme.cardSubtle, borderColor: theme.border },
               ]}
+              onPress={() => router.push('/settings')}
+              hitSlop={8}
+              accessibilityLabel="Settings">
+              <Ionicons name="settings-outline" size={18} color={theme.text} />
+            </Pressable>
+            <Pressable
+              style={[
+                styles.iconBtn,
+                { backgroundColor: theme.cardSubtle, borderColor: theme.border },
+              ]}
               onPress={() => setOverflowMenuVisible(true)}
               hitSlop={8}
               accessibilityLabel="More options">
@@ -368,6 +378,7 @@ export default function HomeScreen() {
       <OverflowMenuModal
         visible={overflowMenuVisible}
         onClose={() => setOverflowMenuVisible(false)}
+        onOpenSettings={() => router.push('/settings')}
         onMarkAllRead={handleMarkAllRead}
         onResetData={handleResetData}
         onSignOut={logout}
