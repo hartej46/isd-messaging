@@ -14,7 +14,7 @@ export const INITIAL_THREADS = [
     id: 'thread_2',
     contactName: 'Alex Rivera',
     phoneNumber: '+1 (555) 876-5432',
-    avatarColor: '#2563EB',
+    avatarColor: '#2A9BA5',
     lastMessage: 'Check out the new design mockup for the One UI app.',
     timestamp: 'Yesterday',
     unreadCount: 2,
@@ -171,7 +171,7 @@ export const INITIAL_MESSAGES = {
 };
 
 export const AVATAR_COLORS = [
-  '#1C68F3',
+  '#2A9BA5',
   '#E11D48',
   '#059669',
   '#7C3AED',
@@ -207,7 +207,7 @@ export const DIRECTORY_CONTACTS = [
     id: 'dir_4',
     contactName: 'Liam Brooks',
     phoneNumber: '+1 (555) 529-4402',
-    avatarColor: '#2563EB',
+    avatarColor: '#2A9BA5',
     category: 'personal',
   },
   {
