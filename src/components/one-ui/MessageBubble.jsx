@@ -24,26 +24,26 @@ function RichAttachmentContent({ text, isMe, theme }) {
             styles.photoPlaceholder,
             {
               backgroundColor: isMe
-                ? 'rgba(255,255,255,0.18)'
+                ? 'rgba(14,52,56,0.1)'
                 : theme.backgroundElement,
             },
           ]}>
           <Ionicons
             name="image"
             size={36}
-            color={isMe ? '#FFFFFF' : theme.primary}
+            color={isMe ? theme.outgoingBubbleText : theme.primary}
           />
         </View>
         <View style={styles.attachmentFooter}>
           <Ionicons
             name="camera-outline"
             size={14}
-            color={isMe ? '#FFFFFF' : theme.textSecondary}
+            color={isMe ? theme.outgoingBubbleText : theme.textSecondary}
           />
           <Text
             style={[
               styles.attachmentTitle,
-              { color: isMe ? '#FFFFFF' : theme.text },
+              { color: isMe ? theme.outgoingBubbleText : theme.text },
             ]}>
             Photo attachment
           </Text>
@@ -60,21 +60,21 @@ function RichAttachmentContent({ text, isMe, theme }) {
             styles.locationIconBox,
             {
               backgroundColor: isMe
-                ? 'rgba(255,255,255,0.2)'
+                ? 'rgba(14,52,56,0.12)'
                 : `${theme.primary}20`,
             },
           ]}>
           <Ionicons
             name="location"
             size={20}
-            color={isMe ? '#FFFFFF' : theme.primary}
+            color={isMe ? theme.outgoingBubbleText : theme.primary}
           />
         </View>
         <View style={styles.locationMeta}>
           <Text
             style={[
               styles.attachmentTitle,
-              { color: isMe ? '#FFFFFF' : theme.text },
+              { color: isMe ? theme.outgoingBubbleText : theme.text },
             ]}>
             Current Location
           </Text>
@@ -82,7 +82,8 @@ function RichAttachmentContent({ text, isMe, theme }) {
             style={[
               styles.locationSub,
               {
-                color: isMe ? 'rgba(255,255,255,0.8)' : theme.textSecondary,
+                color: isMe ? theme.outgoingBubbleText : theme.textSecondary,
+                opacity: isMe ? 0.78 : 1,
               },
             ]}>
             Pinned map coordinates shared
@@ -101,9 +102,7 @@ function RichAttachmentContent({ text, isMe, theme }) {
           style={[
             styles.playCircle,
             {
-              backgroundColor: isMe
-                ? 'rgba(255,255,255,0.24)'
-                : theme.primary,
+              backgroundColor: theme.primary,
             },
           ]}>
           <Ionicons
@@ -120,13 +119,13 @@ function RichAttachmentContent({ text, isMe, theme }) {
                 styles.waveBar,
                 {
                   height,
-                  backgroundColor: isMe
-                    ? isPlaying && idx < 6
-                      ? '#FFFFFF'
-                      : 'rgba(255,255,255,0.55)'
-                    : isPlaying && idx < 6
+                  backgroundColor:
+                    isPlaying && idx < 6
                       ? theme.primary
-                      : theme.textTertiary,
+                      : isMe
+                        ? theme.outgoingBubbleText
+                        : theme.textTertiary,
+                  opacity: isPlaying && idx < 6 ? 1 : isMe ? 0.55 : 1,
                 },
               ]}
             />
@@ -135,7 +134,7 @@ function RichAttachmentContent({ text, isMe, theme }) {
         <Text
           style={[
             styles.voiceDuration,
-            { color: isMe ? '#FFFFFF' : theme.textSecondary },
+            { color: isMe ? theme.outgoingBubbleText : theme.textSecondary },
           ]}>
           {isPlaying ? '0:04' : '0:08'}
         </Text>

@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 export function SquircleAvatar({
   initials = '?',
   size = 48,
-  backgroundColor = '#1C68F3',
+  backgroundColor = '#2A9BA5',
   textColor = '#FFFFFF',
   style,
 }) {

@@ -28,8 +28,8 @@ export function ConversationItem({
       onPress={() => onPress(thread)}
       onLongPress={() => onLongPress(thread)}
       delayLongPress={350}>
-      <View style={[styles.avatarCircle, { backgroundColor: theme.primary }]}>
-        <User size={22} color="#FFFFFF" strokeWidth={2.1} />
+      <View style={[styles.avatarCircle, { backgroundColor: theme.accentSurface }]}>
+        <User size={22} color={theme.accentOnSurface} strokeWidth={2.1} />
       </View>
 
       <View style={styles.content}>
@@ -80,7 +80,11 @@ export function ConversationItem({
                 styles.unreadBadge,
                 { backgroundColor: theme.unreadBadge },
               ]}>
-              <Text style={styles.unreadBadgeText}>
+              <Text
+                style={[
+                  styles.unreadBadgeText,
+                  { color: theme.unreadBadgeText },
+                ]}>
                 {thread.unreadCount > 99 ? '99+' : thread.unreadCount}
               </Text>
             </View>
