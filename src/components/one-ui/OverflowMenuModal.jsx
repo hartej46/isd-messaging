@@ -35,7 +35,6 @@ export function OverflowMenuModal({
             </Text>
           </View>
 
-          {/* Mark all as read */}
           <Pressable
             style={({ pressed }) => [
               styles.menuItem,
@@ -51,7 +50,6 @@ export function OverflowMenuModal({
             </Text>
           </Pressable>
 
-          {/* Reset local data */}
           <Pressable
             style={({ pressed }) => [
               styles.menuItem,
@@ -69,7 +67,6 @@ export function OverflowMenuModal({
 
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
 
-          {/* Sign Out */}
           <Pressable
             style={({ pressed }) => [
               styles.menuItem,

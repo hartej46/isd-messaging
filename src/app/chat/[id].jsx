@@ -140,7 +140,6 @@ export default function ChatThreadScreen() {
       }, 60);
       timersRef.current.push(scrollTimer);
 
-      // Simulate delivery confirmation
       const deliveryTimer = setTimeout(async () => {
         if (!isMountedRef.current) return;
         const deliveredList = await storageService.updateMessageStatus(
@@ -154,7 +153,6 @@ export default function ChatThreadScreen() {
       }, 450);
       timersRef.current.push(deliveryTimer);
 
-      // Check autoReply preference and schedule simulated response
       const settings = await storageService.getSettings();
       if (settings.autoReply && isMountedRef.current) {
         const typingTimer = setTimeout(() => {
@@ -288,7 +286,7 @@ export default function ChatThreadScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-        {/* Header */}
+
         <ChatHeader
           thread={thread}
           onBack={() => router.back()}
@@ -307,7 +305,6 @@ export default function ChatThreadScreen() {
           onMenuPress={() => setOptionsVisible(true)}
         />
 
-        {/* Messages List */}
         {loading ? (
           <View style={styles.centerState}>
             <ActivityIndicator size="large" color={theme.primary} />
@@ -382,7 +379,6 @@ export default function ChatThreadScreen() {
           />
         )}
 
-        {/* One UI Input Bar */}
         <ChatInputBar
           value={inputText}
           onChangeText={setInputText}
@@ -390,7 +386,6 @@ export default function ChatThreadScreen() {
           isSending={isSending}
         />
 
-        {/* Options Modal */}
         <ChatOptionsModal
           visible={optionsVisible}
           thread={thread}

@@ -64,7 +64,7 @@ export default function LoginScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          {/* Top Brand Header */}
+
           <View style={styles.headerSection}>
             <View
               style={[
@@ -79,7 +79,6 @@ export default function LoginScreen() {
             </Text>
           </View>
 
-          {/* Form Container */}
           <View style={styles.formContainer}>
             {errorMessage ? (
               <View
@@ -94,7 +93,6 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            {/* Email Field */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
                 Email or phone
@@ -134,7 +132,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Password Field */}
             <View style={styles.inputGroup}>
               <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>
                 Password
@@ -177,7 +174,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Sign In Button */}
             <Pressable
               style={({ pressed }) => [
                 styles.submitButton,
@@ -196,7 +192,6 @@ export default function LoginScreen() {
               )}
             </Pressable>
 
-            {/* Quick Demo Login Chips */}
             <View style={styles.quickAccessSection}>
               <Text style={[styles.quickAccessTitle, { color: theme.textTertiary }]}>
                 QUICK SIGN IN (ONE-CLICK)
@@ -229,7 +224,6 @@ export default function LoginScreen() {
               </View>
             </View>
 
-            {/* Note banner */}
             <View
               style={[
                 styles.infoCard,

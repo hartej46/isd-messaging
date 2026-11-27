@@ -188,7 +188,7 @@ export function MessageBubble({
           isMe ? styles.rowOutgoing : styles.rowIncoming,
           !isLastInGroup && styles.groupedSpacing,
         ]}>
-        {/* Outgoing meta beside bubble (One UI SMS style) */}
+
         {isMe && isLastInGroup ? (
           <View style={[styles.metaContainer, styles.metaOutgoing]}>
             <View style={styles.statusRow}>
@@ -232,7 +232,6 @@ export function MessageBubble({
           <RichAttachmentContent text={message.text} isMe={isMe} theme={theme} />
         </Pressable>
 
-        {/* Incoming timestamp beside bubble */}
         {!isMe && isLastInGroup ? (
           <View style={[styles.metaContainer, styles.metaIncoming]}>
             <Text style={[styles.timestamp, { color: theme.textTertiary }]}>

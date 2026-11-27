@@ -1,7 +1,3 @@
-/**
- * One UI design system tokens for SMS & Messaging
- */
-
 import '@/global.css';
 
 import { Platform } from 'react-native';
@@ -18,7 +14,7 @@ export const Colors = {
     cardSubtle: '#F6F7FA',
     border: '#E8EAEE',
     borderLight: '#F0F2F5',
-    primary: '#1C68F3', // Signature action blue
+    primary: '#1C68F3',
     primaryDark: '#1254C8',
     primaryLight: '#EBF2FE',
     outgoingBubble: '#1C68F3',

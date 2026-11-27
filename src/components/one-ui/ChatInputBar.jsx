@@ -38,7 +38,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
           borderTopColor: theme.borderLight,
         },
       ]}>
-      {/* Expandable Quick Action / Attachment Tray */}
+
       {trayOpen ? (
         <View
           style={[
@@ -123,7 +123,6 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
         </View>
       ) : null}
 
-      {/* Main Input Pill Bar */}
       <View style={styles.barRow}>
         <Pressable
           style={({ pressed }) => [

@@ -185,7 +185,7 @@ export default function ComposeScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        {/* One UI App Bar */}
+
         <View style={styles.appBar}>
           <Pressable
             style={styles.backBtn}
@@ -197,7 +197,6 @@ export default function ComposeScreen() {
           <View style={styles.placeholder} />
         </View>
 
-        {/* Recipient Chip / Input Area */}
         <View
           style={[
             styles.recipientContainer,
@@ -237,13 +236,12 @@ export default function ComposeScreen() {
           )}
         </View>
 
-        {/* Contact Suggestions List */}
         <ScrollView
           style={styles.suggestionsScroll}
           contentContainerStyle={styles.suggestionsContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          {/* Custom Recipient Quick Add */}
+
           {!selectedContact && query.trim().length > 0 && !exactMatchExists ? (
             <Pressable
               style={({ pressed }) => [
@@ -279,7 +277,6 @@ export default function ComposeScreen() {
             </Pressable>
           ) : null}
 
-          {/* Recent Conversations */}
           {filteredRecent.length > 0 ? (
             <View style={styles.sectionBlock}>
               <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
@@ -336,7 +333,6 @@ export default function ComposeScreen() {
             </View>
           ) : null}
 
-          {/* Directory Contacts */}
           {filteredDirectory.length > 0 ? (
             <View style={styles.sectionBlock}>
               <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
@@ -393,7 +389,6 @@ export default function ComposeScreen() {
           ) : null}
         </ScrollView>
 
-        {/* Message Input Bar */}
         <View
           style={[
             styles.bottomInputBar,

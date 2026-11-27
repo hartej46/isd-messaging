@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS = {
 };
 
 export const storageService = {
-  // Session Methods
+
   async getSession() {
     try {
       const data = await AsyncStorage.getItem(KEYS.AUTH_SESSION);
@@ -49,7 +49,6 @@ export const storageService = {
     }
   },
 
-  // Threads Methods
   async getThreads() {
     try {
       const data = await AsyncStorage.getItem(KEYS.THREADS);
@@ -172,7 +171,6 @@ export const storageService = {
     }
   },
 
-  // Messages Methods
   async getMessages(threadId) {
     try {
       const key = `${KEYS.THREAD_MESSAGES_PREFIX}${threadId}`;
@@ -198,7 +196,6 @@ export const storageService = {
       const updated = [...current, message];
       await AsyncStorage.setItem(key, JSON.stringify(updated));
 
-      // Also update thread's lastMessage and timestamp
       const threads = await this.getThreads();
       const threadIndex = threads.findIndex((t) => t.id === threadId);
       if (threadIndex >= 0) {
@@ -337,7 +334,6 @@ export const storageService = {
     }
   },
 
-  // Settings
   async getSettings() {
     try {
       const data = await AsyncStorage.getItem(KEYS.SETTINGS);
@@ -360,7 +356,6 @@ export const storageService = {
     }
   },
 
-  // Initial Data Seeding
   async seedInitialData(force = false) {
     try {
       const isSeeded = await AsyncStorage.getItem(KEYS.SEEDED);

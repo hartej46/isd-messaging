@@ -8,7 +8,7 @@ export function SquircleAvatar({
   textColor = '#FFFFFF',
   style,
 }) {
-  const borderRadius = Math.round(size * 0.38); // One UI squircle ratio
+  const borderRadius = Math.round(size * 0.38);
   const fontSize = Math.round(size * 0.4);
 
   return (

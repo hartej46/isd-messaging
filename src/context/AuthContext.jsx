@@ -5,7 +5,7 @@ const AuthContext = createContext(undefined);
 
 function formatNameFromEmail(email) {
   const localPart = email.split('@')[0] || 'User';
-  // Split on dots, underscores, dashes
+
   const parts = localPart
     .split(/[._-]+/)
     .filter(Boolean)
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
         if (session) {
           setUser(session);
         }
-        // Ensure mock threads exist in storage for when user enters
+
         await storageService.seedInitialData();
       } catch (err) {
         console.error('Error during auth initialization:', err);
@@ -51,7 +51,6 @@ export function AuthProvider({ children }) {
       return { success: false, error: 'Please enter both email and password.' };
     }
 
-    // Mock login - any email and password is accepted
     const { name, initials } = formatNameFromEmail(cleanEmail);
 
     const session = {

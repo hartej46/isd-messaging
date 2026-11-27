@@ -35,7 +35,6 @@ export default function HomeScreen() {
   const [messageMatches, setMessageMatches] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
 
-  // Modals state
   const [selectedThread, setSelectedThread] = useState(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [overflowMenuVisible, setOverflowMenuVisible] = useState(false);
@@ -114,7 +113,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Actions
   const handleTogglePin = async (threadId) => {
     try {
       const updated = await storageService.togglePin(threadId);
@@ -169,7 +167,7 @@ export default function HomeScreen() {
   };
 
   const handleOpenConversation = async (thread) => {
-    // Clear unread count and navigate to the conversation thread
+
     if (thread.unreadCount > 0) {
       try {
         const updated = await storageService.markThreadAsRead(thread.id);
@@ -186,7 +184,6 @@ export default function HomeScreen() {
     setActionModalVisible(true);
   };
 
-  // Computed metrics
   const totalUnread = useMemo(
     () => threads.reduce((acc, t) => acc + (t.unreadCount > 0 ? 1 : 0), 0),
     [threads]
@@ -206,10 +203,9 @@ export default function HomeScreen() {
     [threads.length, totalUnread, pinnedCount]
   );
 
-  // Filtering
   const filteredThreads = useMemo(() => {
     return threads.filter((t) => {
-      // Search query filter
+
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
         const matchesName = t.contactName.toLowerCase().includes(query);
@@ -218,7 +214,6 @@ export default function HomeScreen() {
         if (!matchesName && !matchesMsg && !matchesPhone) return false;
       }
 
-      // Tab filter
       if (activeTab === 'unread') return t.unreadCount > 0;
       if (activeTab === 'starred') return t.isPinned;
 
@@ -228,7 +223,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
-      {/* Signature One UI Viewing Area Header */}
+
       <View style={styles.headerViewingArea}>
         <View style={styles.headerTopBar}>
           <View style={styles.headerTitleGroup}>
@@ -246,7 +241,6 @@ export default function HomeScreen() {
             )}
           </View>
 
-          {/* Right Action Icons */}
           <View style={styles.headerIconsRow}>
             <Pressable
               style={[
@@ -265,7 +259,6 @@ export default function HomeScreen() {
           {user?.name ? `Welcome back, ${user.name}` : 'Keep in touch with friends and family'}
         </Text>
 
-        {/* Search Bar */}
         <View style={styles.searchWrapper}>
           <SearchBar
             value={searchQuery}
@@ -275,7 +268,6 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* Category Tabs */}
         <CategoryTabs
           tabs={categoryTabs}
           activeTab={activeTab}
@@ -283,7 +275,6 @@ export default function HomeScreen() {
         />
       </View>
 
-      {/* Main Conversation FlatList */}
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.primary} />
@@ -360,10 +351,8 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Floating Action Button */}
       <ComposeFAB onPress={() => router.push('/compose')} />
 
-      {/* Long-press Thread Context Modal */}
       <ThreadActionModal
         visible={actionModalVisible}
         thread={selectedThread}
@@ -376,7 +365,6 @@ export default function HomeScreen() {
         onDelete={handleDeleteThread}
       />
 
-      {/* Overflow Options Modal */}
       <OverflowMenuModal
         visible={overflowMenuVisible}
         onClose={() => setOverflowMenuVisible(false)}
@@ -446,7 +434,7 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: Spacing.four,
     paddingTop: Spacing.two,
-    paddingBottom: 90, // Room for FAB
+    paddingBottom: 90,
   },
   loadingContainer: {
     flex: 1,

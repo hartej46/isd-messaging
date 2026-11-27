@@ -33,7 +33,7 @@ export function ThreadActionModal({
             },
           ]}
           onPress={(e) => e.stopPropagation()}>
-          {/* Header Info */}
+
           <View style={styles.headerRow}>
             <SquircleAvatar
               initials={thread.contactName}
@@ -52,9 +52,8 @@ export function ThreadActionModal({
 
           <View style={[styles.divider, { backgroundColor: theme.borderLight }]} />
 
-          {/* Action List */}
           <View style={styles.actionsList}>
-            {/* Pin / Unpin */}
+
             <Pressable
               style={({ pressed }) => [
                 styles.actionItem,
@@ -74,7 +73,6 @@ export function ThreadActionModal({
               </Text>
             </Pressable>
 
-            {/* Mark as Read / Unread */}
             <Pressable
               style={({ pressed }) => [
                 styles.actionItem,
@@ -98,7 +96,6 @@ export function ThreadActionModal({
               </Text>
             </Pressable>
 
-            {/* Delete */}
             <Pressable
               style={({ pressed }) => [
                 styles.actionItem,
@@ -115,7 +112,6 @@ export function ThreadActionModal({
             </Pressable>
           </View>
 
-          {/* Cancel Button */}
           <Pressable
             style={[
               styles.cancelBtn,
