@@ -52,6 +52,12 @@ Run the linter:
 npm run lint
 ```
 
+Run unit tests:
+
+```bash
+npm test
+```
+
 Check the JavaScript project configuration with TypeScript:
 
 ```bash
@@ -83,3 +89,8 @@ The main routes are:
 ## Demo data and behavior
 
 The app stores its demo session, conversations, messages, and preferences in device storage using AsyncStorage. On first run, it attempts to load sample data from DummyJSON and falls back to bundled sample data when that request is unavailable. Sending messages and automatic replies are simulated; no message is delivered to a phone number.
+
+## Documentation
+
+- [Architecture & Design Overview](DESIGN.md) — Mermaid diagram of app structure and data flow.
+- [AI Usage & Reflection](AI_USAGE.md) — Short Q&A on how AI was used and lessons learned.
