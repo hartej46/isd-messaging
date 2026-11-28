@@ -39,6 +39,12 @@
         }
       ],
       [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ISD Messaging to record voice messages."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

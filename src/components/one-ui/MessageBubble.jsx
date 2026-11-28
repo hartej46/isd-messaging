@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
@@ -13,8 +14,73 @@ function checkEmojiOnly(text) {
   return EMOJI_ONLY_REGEX.test(trimmed);
 }
 
+function VoiceAttachmentContent({ message, isMe, theme }) {
+  const [simPlaying, setSimPlaying] = useState(false);
+  const player = useAudioPlayer(message?.audioUri || null);
+  const playerStatus = useAudioPlayerStatus(player);
+  const hasRealAudio = Boolean(message?.audioUri);
+  const isPlaying = hasRealAudio ? playerStatus.playing : simPlaying;
+  const durationLabel = message?.audioDuration || '0:08';
+
+  const handleToggle = () => {
+    if (!hasRealAudio) {
+      setSimPlaying((prev) => !prev);
+      return;
+    }
+    if (playerStatus.playing) {
+      player.pause();
+    } else {
+      if (
+        playerStatus.duration > 0 &&
+        playerStatus.currentTime >= playerStatus.duration - 0.1
+      ) {
+        player.seekTo(0);
+      }
+      player.play();
+    }
+  };
+
+  return (
+    <Pressable style={styles.voiceRow} onPress={handleToggle}>
+      <View style={[styles.playCircle, { backgroundColor: theme.primary }]}>
+        <Ionicons
+          name={isPlaying ? 'pause' : 'play'}
+          size={14}
+          color="#FFFFFF"
+        />
+      </View>
+      <View style={styles.waveContainer}>
+        {WAVE_BARS.map((height, idx) => (
+          <View
+            key={idx}
+            style={[
+              styles.waveBar,
+              {
+                height,
+                backgroundColor:
+                  isPlaying && idx < 6
+                    ? theme.primary
+                    : isMe
+                      ? theme.outgoingBubbleText
+                      : theme.textTertiary,
+                opacity: isPlaying && idx < 6 ? 1 : isMe ? 0.55 : 1,
+              },
+            ]}
+          />
+        ))}
+      </View>
+      <Text
+        style={[
+          styles.voiceDuration,
+          { color: isMe ? theme.outgoingBubbleText : theme.textSecondary },
+        ]}>
+        {durationLabel}
+      </Text>
+    </Pressable>
+  );
+}
+
 function RichAttachmentContent({ message, isMe, theme }) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const text = message?.text || '';
 
   if (message?.imageUri) {
@@ -119,53 +185,8 @@ function RichAttachmentContent({ message, isMe, theme }) {
     );
   }
 
-  if (text.startsWith('[Voice')) {
-    return (
-      <Pressable
-        style={styles.voiceRow}
-        onPress={() => setIsPlaying((prev) => !prev)}>
-        <View
-          style={[
-            styles.playCircle,
-            {
-              backgroundColor: theme.primary,
-            },
-          ]}>
-          <Ionicons
-            name={isPlaying ? 'pause' : 'play'}
-            size={14}
-            color="#FFFFFF"
-          />
-        </View>
-        <View style={styles.waveContainer}>
-          {WAVE_BARS.map((height, idx) => (
-            <View
-              key={idx}
-              style={[
-                styles.waveBar,
-                {
-                  height,
-                  backgroundColor:
-                    isPlaying && idx < 6
-                      ? theme.primary
-                      : isMe
-                        ? theme.outgoingBubbleText
-                        : theme.textTertiary,
-                  opacity: isPlaying && idx < 6 ? 1 : isMe ? 0.55 : 1,
-                },
-              ]}
-            />
-          ))}
-        </View>
-        <Text
-          style={[
-            styles.voiceDuration,
-            { color: isMe ? theme.outgoingBubbleText : theme.textSecondary },
-          ]}>
-          {isPlaying ? '0:04' : '0:08'}
-        </Text>
-      </Pressable>
-    );
+  if (message?.audioUri || text.startsWith('[Voice')) {
+    return <VoiceAttachmentContent message={message} isMe={isMe} theme={theme} />;
   }
 
   return (

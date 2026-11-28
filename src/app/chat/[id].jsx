@@ -121,7 +121,9 @@ export default function ChatThreadScreen() {
   const handleSend = async (rawText, attachment = null) => {
     const cleanText = (rawText ?? inputText).trim();
     const imageUri = attachment?.imageUri || null;
-    if ((!cleanText && !imageUri) || !threadId || isSending) return;
+    const audioUri = attachment?.audioUri || null;
+    const audioDuration = attachment?.durationLabel || null;
+    if ((!cleanText && !imageUri && !audioUri) || !threadId || isSending) return;
 
     setIsSending(true);
     setErrorMsg(null);
@@ -129,12 +131,16 @@ export default function ChatThreadScreen() {
       setInputText('');
     }
 
-    const messageText = cleanText || '[Photo attachment]';
+    const messageText =
+      cleanText ||
+      (audioUri ? `[Voice message ${audioDuration || '0:01'}]` : '[Photo attachment]');
     const newMessage = {
       id: `msg_${Date.now()}`,
       threadId,
       text: messageText,
       imageUri,
+      audioUri,
+      audioDuration,
       sender: 'me',
       timestamp: formatShortTime(),
       status: 'sent',

@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
+import { VoiceRecorderBar } from './VoiceRecorderBar';
 
 const QUICK_REPLIES = [
   'On my way!',
@@ -37,6 +38,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
   const theme = useTheme();
   const [trayOpen, setTrayOpen] = useState(false);
   const [showQuickReplies, setShowQuickReplies] = useState(false);
+  const [recordingMode, setRecordingMode] = useState(false);
   const [pendingImageUri, setPendingImageUri] = useState(null);
   const inputRef = useRef(null);
 
@@ -204,7 +206,11 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
       label: 'Voice Recorder',
       icon: 'mic',
       color: '#E55353',
-      onPress: () => handleQuickOption('[Voice message 0:08]'),
+      onPress: () => {
+        setTrayOpen(false);
+        setShowQuickReplies(false);
+        setRecordingMode(true);
+      },
     },
     {
       key: 'files',
@@ -263,6 +269,15 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
         </View>
       ) : null}
 
+      {recordingMode ? (
+        <VoiceRecorderBar
+          onCancel={() => setRecordingMode(false)}
+          onSendVoice={(voiceData) => {
+            setRecordingMode(false);
+            onSend('', voiceData);
+          }}
+        />
+      ) : (
       <View style={styles.barRow}>
         <Pressable
           style={({ pressed }) => [
@@ -358,13 +373,18 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               styles.rightVoiceBtn,
               pressed && { opacity: 0.6 },
             ]}
-            onPress={() => handleQuickOption('[Voice message 0:08]')}
+            onPress={() => {
+              setTrayOpen(false);
+              setShowQuickReplies(false);
+              setRecordingMode(true);
+            }}
             hitSlop={6}
-            accessibilityLabel="Send voice message">
+            accessibilityLabel="Record voice message">
             <WaveformIcon color={theme.text} />
           </Pressable>
         )}
       </View>
+      )}
 
       {trayOpen ? (
         <View
