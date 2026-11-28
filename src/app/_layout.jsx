@@ -46,7 +46,6 @@ function NavigationProtector() {
       <Stack.Screen name="compose" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />
-      <Stack.Screen name="explore" options={{ headerShown: false }} />
     </Stack>
   );
 }
