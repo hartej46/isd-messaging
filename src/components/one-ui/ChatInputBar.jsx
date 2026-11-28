@@ -36,6 +36,7 @@ function WaveformIcon({ color }) {
 export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
   const theme = useTheme();
   const [trayOpen, setTrayOpen] = useState(false);
+  const [showQuickReplies, setShowQuickReplies] = useState(false);
   const [pendingImageUri, setPendingImageUri] = useState(null);
   const inputRef = useRef(null);
 
@@ -44,6 +45,7 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
   const handleQuickOption = (text) => {
     setTrayOpen(false);
+    setShowQuickReplies(false);
     onSend(text);
   };
 
@@ -66,10 +68,37 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
       if (!result.canceled && result.assets?.[0]?.uri) {
         setTrayOpen(false);
+        setShowQuickReplies(false);
         setPendingImageUri(result.assets[0].uri);
       }
     } catch {
       Alert.alert('Error', 'Could not open photo library.');
+    }
+  };
+
+  const handlePickVideo = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert(
+          'Permission Required',
+          'Please allow media library access to attach a video.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['videos'],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets?.[0]?.uri) {
+        setTrayOpen(false);
+        setShowQuickReplies(false);
+        onSend('[Video attachment]');
+      }
+    } catch {
+      Alert.alert('Error', 'Could not open video library.');
     }
   };
 
@@ -91,12 +120,100 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
 
       if (!result.canceled && result.assets?.[0]?.uri) {
         setTrayOpen(false);
+        setShowQuickReplies(false);
         setPendingImageUri(result.assets[0].uri);
       }
     } catch {
       Alert.alert('Camera Unavailable', 'Camera is not available on this device.');
     }
   };
+
+  const attachmentActions = [
+    {
+      key: 'quick',
+      label: 'Quick response',
+      icon: 'chatbox-ellipses',
+      color: '#4A90E2',
+      onPress: () => setShowQuickReplies((prev) => !prev),
+    },
+    {
+      key: 'schedule',
+      label: 'Schedule message',
+      icon: 'time',
+      color: '#4A90E2',
+      onPress: () => handleQuickOption('Let us schedule a time to catch up.'),
+    },
+    {
+      key: 'location',
+      label: 'Location',
+      icon: 'location',
+      color: '#4CAF50',
+      onPress: () => handleQuickOption('[Shared current location]'),
+    },
+    {
+      key: 'image',
+      label: 'Image',
+      icon: 'image',
+      color: '#E94E77',
+      onPress: handlePickFromGallery,
+    },
+    {
+      key: 'camera',
+      label: 'Camera',
+      icon: 'camera',
+      color: '#0EA5E9',
+      onPress: handleTakePhoto,
+    },
+    {
+      key: 'video',
+      label: 'Video',
+      icon: 'videocam',
+      color: '#9C6ADE',
+      onPress: handlePickVideo,
+    },
+    {
+      key: 'audio',
+      label: 'Audio',
+      icon: 'musical-note',
+      color: '#6B84E8',
+      onPress: () => handleQuickOption('[Voice message 0:08]'),
+    },
+    {
+      key: 'contacts',
+      label: 'Contacts',
+      icon: 'person',
+      color: '#F58231',
+      onPress: () => handleQuickOption('[Shared contact card]'),
+    },
+    {
+      key: 'calendar',
+      label: 'Calendar',
+      icon: 'calendar',
+      color: '#2EAD6D',
+      onPress: () => handleQuickOption('Let us add this to the calendar.'),
+    },
+    {
+      key: 'notes',
+      label: 'Notes',
+      icon: 'document-text',
+      color: '#F46A25',
+      onPress: () => handleQuickOption('[Shared note]'),
+    },
+    {
+      key: 'voice',
+      label: 'Voice Recorder',
+      icon: 'mic',
+      color: '#E55353',
+      onPress: () => handleQuickOption('[Voice message 0:08]'),
+    },
+    {
+      key: 'files',
+      label: 'My Files',
+      icon: 'folder',
+      color: '#F4B400',
+      onPress: () => handleQuickOption('[Shared file attachment]'),
+    },
+  ];
 
   const handleSendPress = () => {
     if (!canSend || isSending) return;
@@ -143,90 +260,6 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
             accessibilityLabel="Remove attached photo">
             <Ionicons name="close" size={16} color={theme.text} />
           </Pressable>
-        </View>
-      ) : null}
-
-      {trayOpen ? (
-        <View
-          style={[
-            styles.trayContainer,
-            { backgroundColor: theme.cardSubtle, borderColor: theme.border },
-          ]}>
-          <View style={styles.attachmentRow}>
-            <Pressable
-              style={styles.attachmentItem}
-              onPress={handlePickFromGallery}>
-              <View
-                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name="image-outline" size={20} color={theme.primary} />
-              </View>
-              <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
-                Gallery
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.attachmentItem}
-              onPress={() => handleQuickOption('[Shared current location]')}>
-              <View
-                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name="location-outline" size={20} color={theme.primary} />
-              </View>
-              <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
-                Location
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.attachmentItem}
-              onPress={() => handleQuickOption('[Voice message 0:08]')}>
-              <View
-                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name="mic-outline" size={20} color={theme.primary} />
-              </View>
-              <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
-                Voice
-              </Text>
-            </Pressable>
-
-            <Pressable
-              style={styles.attachmentItem}
-              onPress={() => handleQuickOption('Let us schedule a time to catch up.')}>
-              <View
-                style={[styles.attachmentIcon, { backgroundColor: theme.primaryLight }]}>
-                <Ionicons name="calendar-outline" size={20} color={theme.primary} />
-              </View>
-              <Text style={[styles.attachmentLabel, { color: theme.textSecondary }]}>
-                Schedule
-              </Text>
-            </Pressable>
-          </View>
-
-          <Text style={[styles.quickTitle, { color: theme.textTertiary }]}>
-            QUICK RESPONSES
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickChipsRow}>
-            {QUICK_REPLIES.map((reply) => (
-              <Pressable
-                key={reply}
-                style={({ pressed }) => [
-                  styles.quickChip,
-                  {
-                    backgroundColor: theme.card,
-                    borderColor: theme.border,
-                    opacity: pressed ? 0.75 : 1,
-                  },
-                ]}
-                onPress={() => handleQuickOption(reply)}>
-                <Text style={[styles.quickChipText, { color: theme.text }]}>
-                  {reply}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
         </View>
       ) : null}
 
@@ -291,13 +324,16 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
               styles.smileyBtn,
               pressed && { opacity: 0.65 },
             ]}
-            onPress={() => setTrayOpen((prev) => !prev)}
+            onPress={() => {
+              setTrayOpen(true);
+              setShowQuickReplies((prev) => !prev);
+            }}
             hitSlop={6}
             accessibilityLabel="Quick replies and expressions">
             <Ionicons
               name="happy-outline"
               size={22}
-              color={trayOpen ? theme.primary : theme.text}
+              color={showQuickReplies ? theme.primary : theme.text}
             />
           </Pressable>
         </View>
@@ -329,6 +365,69 @@ export function ChatInputBar({ value, onChangeText, onSend, isSending }) {
           </Pressable>
         )}
       </View>
+
+      {trayOpen ? (
+        <View
+          style={[
+            styles.traySheet,
+            { backgroundColor: theme.cardSubtle, borderTopColor: theme.borderLight },
+          ]}>
+          {showQuickReplies ? (
+            <View style={styles.quickSection}>
+              <Text style={[styles.quickTitle, { color: theme.textTertiary }]}>
+                QUICK RESPONSES
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickChipsRow}>
+                {QUICK_REPLIES.map((reply) => (
+                  <Pressable
+                    key={reply}
+                    style={({ pressed }) => [
+                      styles.quickChip,
+                      {
+                        backgroundColor: theme.card,
+                        borderColor: theme.border,
+                        opacity: pressed ? 0.75 : 1,
+                      },
+                    ]}
+                    onPress={() => handleQuickOption(reply)}>
+                    <Text style={[styles.quickChipText, { color: theme.text }]}>
+                      {reply}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          <View style={styles.gridContainer}>
+            {attachmentActions.map((item) => (
+              <Pressable
+                key={item.key}
+                style={({ pressed }) => [
+                  styles.gridItem,
+                  pressed && { opacity: 0.75 },
+                ]}
+                onPress={item.onPress}>
+                <View
+                  style={[
+                    styles.gridCircle,
+                    { backgroundColor: theme.card, borderColor: theme.borderLight },
+                  ]}>
+                  <Ionicons name={item.icon} size={24} color={item.color} />
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[styles.gridLabel, { color: theme.textSecondary }]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -339,32 +438,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 10,
   },
-  trayContainer: {
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    padding: Spacing.three,
-    marginBottom: Spacing.two,
-    gap: Spacing.two,
+  traySheet: {
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    borderTopWidth: 0.5,
+    marginTop: 10,
+    marginHorizontal: -10,
+    marginBottom: -10,
+    paddingHorizontal: 14,
+    paddingTop: 20,
+    paddingBottom: 18,
+    gap: 14,
   },
-  attachmentRow: {
+  quickSection: {
+    gap: 8,
+  },
+  gridContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingBottom: Spacing.one,
+    flexWrap: 'wrap',
   },
-  attachmentItem: {
+  gridItem: {
+    width: '25%',
     alignItems: 'center',
-    gap: 6,
+    marginBottom: 18,
+    gap: 7,
   },
-  attachmentIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.medium,
+  gridCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 0.5,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  attachmentLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+  gridLabel: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   quickTitle: {
     fontSize: 10,
