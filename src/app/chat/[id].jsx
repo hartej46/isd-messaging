@@ -49,9 +49,9 @@ export default function ChatThreadScreen() {
     () =>
       PanResponder.create({
         onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
-          dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.5,
+          dx > 30 && Math.abs(dx) > Math.abs(dy) * 1.5,
         onPanResponderRelease: (_, { dx, vx }) => {
-          if (dx <= -100 || (dx <= -60 && vx <= -0.5)) {
+          if (dx >= 100 || (dx >= 60 && vx >= 0.5)) {
             router.back();
           }
         },
