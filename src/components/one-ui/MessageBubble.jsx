@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
@@ -13,8 +13,34 @@ function checkEmojiOnly(text) {
   return EMOJI_ONLY_REGEX.test(trimmed);
 }
 
-function RichAttachmentContent({ text, isMe, theme }) {
+function RichAttachmentContent({ message, isMe, theme }) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const text = message?.text || '';
+
+  if (message?.imageUri) {
+    const caption = text && text !== '[Photo attachment]' ? text : null;
+    return (
+      <View style={styles.imageBubbleContent}>
+        <Image
+          source={{ uri: message.imageUri }}
+          style={styles.attachedImage}
+          resizeMode="cover"
+        />
+        {caption ? (
+          <Text
+            style={[
+              styles.body,
+              {
+                color: isMe ? theme.outgoingBubbleText : theme.incomingBubbleText,
+                marginTop: 6,
+              },
+            ]}>
+            {caption}
+          </Text>
+        ) : null}
+      </View>
+    );
+  }
 
   if (text.startsWith('[Photo')) {
     return (
@@ -198,7 +224,7 @@ export function MessageBubble({
         {isEmojiOnly ? (
           <Text style={styles.emojiOnlyText}>{message.text.trim()}</Text>
         ) : (
-          <RichAttachmentContent text={message.text} isMe={isMe} theme={theme} />
+          <RichAttachmentContent message={message} isMe={isMe} theme={theme} />
         )}
       </Pressable>
 
@@ -274,6 +300,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     minWidth: 180,
+  },
+  imageBubbleContent: {
+    width: 220,
+  },
+  attachedImage: {
+    width: 220,
+    height: 170,
+    borderRadius: 14,
   },
   locationIconBox: {
     width: 38,

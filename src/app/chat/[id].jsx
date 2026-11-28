@@ -118,9 +118,10 @@ export default function ChatThreadScreen() {
     }
   };
 
-  const handleSend = async (rawText) => {
+  const handleSend = async (rawText, attachment = null) => {
     const cleanText = (rawText ?? inputText).trim();
-    if (!cleanText || !threadId || isSending) return;
+    const imageUri = attachment?.imageUri || null;
+    if ((!cleanText && !imageUri) || !threadId || isSending) return;
 
     setIsSending(true);
     setErrorMsg(null);
@@ -128,10 +129,12 @@ export default function ChatThreadScreen() {
       setInputText('');
     }
 
+    const messageText = cleanText || '[Photo attachment]';
     const newMessage = {
       id: `msg_${Date.now()}`,
       threadId,
-      text: cleanText,
+      text: messageText,
+      imageUri,
       sender: 'me',
       timestamp: formatShortTime(),
       status: 'sent',
@@ -142,7 +145,7 @@ export default function ChatThreadScreen() {
       if (!isMountedRef.current) return;
       setMessages(updated);
 
-      chatApi.postSimulatedMessage(cleanText);
+      chatApi.postSimulatedMessage(messageText);
 
       const scrollTimer = setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
