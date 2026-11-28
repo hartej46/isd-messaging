@@ -1,11 +1,65 @@
 import React from 'react';
-import { Alert, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { Phone, User } from 'lucide-react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { Phone, RefreshCw, User, Users } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
 
-export function ContactsCallList({ contacts, scrollY }) {
+export function ContactsCallList({
+  contacts,
+  scrollY,
+  onSyncContacts,
+  syncingContacts = false,
+  syncStatusText,
+  onOpenContactChat,
+}) {
   const theme = useTheme();
+
+  const renderSyncHeader = () => {
+    if (!onSyncContacts) return null;
+    return (
+      <View
+        style={[
+          styles.syncCard,
+          { backgroundColor: theme.card, borderColor: theme.border },
+        ]}>
+        <View style={[styles.syncIconBox, { backgroundColor: theme.primaryLight }]}>
+          <Users size={20} color={theme.primary} strokeWidth={2.1} />
+        </View>
+        <View style={styles.meta}>
+          <Text style={[styles.name, { color: theme.text }]}>Device Contacts</Text>
+          <Text style={[styles.number, { color: theme.textSecondary }]}>
+            {syncStatusText || 'Sync phone contacts to message or call'}
+          </Text>
+        </View>
+        <Pressable
+          disabled={syncingContacts}
+          onPress={onSyncContacts}
+          style={({ pressed }) => [
+            styles.syncBtn,
+            { backgroundColor: theme.primary },
+            pressed && { opacity: 0.85 },
+            syncingContacts && { opacity: 0.65 },
+          ]}>
+          {syncingContacts ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <RefreshCw size={14} color="#FFFFFF" strokeWidth={2.4} />
+              <Text style={styles.syncBtnText}>Sync</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+    );
+  };
 
   return (
     <Animated.FlatList
@@ -14,6 +68,7 @@ export function ContactsCallList({ contacts, scrollY }) {
       style={styles.flex}
       contentContainerStyle={styles.listContainer}
       showsVerticalScrollIndicator={false}
+      ListHeaderComponent={renderSyncHeader}
       onScroll={Animated.event(
         [{ nativeEvent: { contentOffset: { y: scrollY } } }],
         { useNativeDriver: false }
@@ -34,12 +89,16 @@ export function ContactsCallList({ contacts, scrollY }) {
                 borderBottomRightRadius: isLast ? 26 : 0,
               },
             ]}
-            onPress={() =>
+            onPress={() => {
+              if (onOpenContactChat) {
+                onOpenContactChat(item);
+                return;
+              }
               Alert.alert(
                 'Voice Call',
                 `Calling ${item.contactName} (${item.phoneNumber})...`
-              )
-            }>
+              );
+            }}>
             <View
               style={[styles.avatar, { backgroundColor: theme.accentSurface }]}>
               <User size={21} color={theme.accentOnSurface} strokeWidth={2.1} />
@@ -52,10 +111,18 @@ export function ContactsCallList({ contacts, scrollY }) {
                 {item.phoneNumber}
               </Text>
             </View>
-            <View
+            <Pressable
+              hitSlop={8}
+              onPress={(e) => {
+                e.stopPropagation();
+                Alert.alert(
+                  'Voice Call',
+                  `Calling ${item.contactName} (${item.phoneNumber})...`
+                );
+              }}
               style={[styles.callBtn, { backgroundColor: theme.primaryLight }]}>
               <Phone size={18} color={theme.primary} strokeWidth={2.2} />
-            </View>
+            </Pressable>
           </Pressable>
         );
       }}
@@ -69,6 +136,36 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     paddingBottom: 86,
+  },
+  syncCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three + 2,
+    paddingVertical: 14,
+    borderRadius: 22,
+    borderWidth: 1,
+    gap: 12,
+    marginBottom: 12,
+  },
+  syncIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  syncBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 999,
+  },
+  syncBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   row: {
     flexDirection: 'row',

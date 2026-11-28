@@ -113,6 +113,35 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleSyncDeviceContacts = async () => {
+    setBusyAction(true);
+    try {
+      const result = await storageService.syncDeviceContacts();
+      if (!result.supported) {
+        Alert.alert(
+          'Not Supported on Web',
+          'Device contact sync requires iOS or Android.'
+        );
+        return;
+      }
+      if (result.status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow Contacts permission in your device settings to sync contacts.'
+        );
+        return;
+      }
+      Alert.alert(
+        'Contacts Synced',
+        `Synced ${result.count} device contacts to your messaging directory.`
+      );
+    } catch {
+      Alert.alert('Sync Failed', 'Could not sync device contacts.');
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
   const handleSyncApi = () => {
     Alert.alert(
       'Sync DummyJSON API',
@@ -345,6 +374,18 @@ export default function SettingsScreen() {
             chevronColor={theme.textTertiary}
             disabled={busyAction}
             onPress={handleMarkAllRead}
+          />
+
+          <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
+
+          <SettingsActionRow
+            iconName="people-outline"
+            iconColor={theme.primary}
+            label="Sync device contacts"
+            labelColor={theme.text}
+            chevronColor={theme.textTertiary}
+            disabled={busyAction}
+            onPress={handleSyncDeviceContacts}
           />
 
           <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />

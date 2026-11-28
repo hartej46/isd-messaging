@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Animated,
   Pressable,
   RefreshControl,
@@ -58,18 +59,22 @@ export default function HomeScreen() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [actionModalVisible, setActionModalVisible] = useState(false);
   const [overflowMenuVisible, setOverflowMenuVisible] = useState(false);
+  const [syncingContacts, setSyncingContacts] = useState(false);
+  const [contactsMeta, setContactsMeta] = useState({ count: 0, syncedAt: null });
 
   const [scrollY] = useState(() => new Animated.Value(0));
 
   const refreshData = useCallback(async () => {
     try {
       setErrorMsg(null);
-      const [threadData, contactData] = await Promise.all([
+      const [threadData, contactData, meta] = await Promise.all([
         storageService.getThreads(),
         storageService.getAllContacts(),
+        storageService.getDeviceContactsMeta(),
       ]);
       setThreads(sortThreads(threadData));
       setContactsList([...contactData.recent, ...contactData.directory]);
+      setContactsMeta(meta);
     } catch {
       setErrorMsg('Unable to load conversations. Pull down or tap retry.');
     }
@@ -78,12 +83,17 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
-      Promise.all([storageService.getThreads(), storageService.getAllContacts()])
-        .then(([threadData, contactData]) => {
+      Promise.all([
+        storageService.getThreads(),
+        storageService.getAllContacts(),
+        storageService.getDeviceContactsMeta(),
+      ])
+        .then(([threadData, contactData, meta]) => {
           if (!isActive) return;
           setErrorMsg(null);
           setThreads(sortThreads(threadData));
           setContactsList([...contactData.recent, ...contactData.directory]);
+          setContactsMeta(meta);
           setLoading(false);
         })
         .catch(() => {
@@ -110,6 +120,49 @@ export default function HomeScreen() {
     setRefreshing(true);
     await refreshData();
     setRefreshing(false);
+  };
+
+  const handleSyncDeviceContacts = async () => {
+    setSyncingContacts(true);
+    try {
+      const result = await storageService.syncDeviceContacts();
+      if (!result.supported) {
+        Alert.alert(
+          'Not Supported on Web',
+          'Device contact sync requires iOS or Android.'
+        );
+        return;
+      }
+      if (result.status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Please allow Contacts permission in your device settings to sync contacts.'
+        );
+        return;
+      }
+      await refreshData();
+      Alert.alert(
+        'Contacts Synced',
+        `Synced ${result.count} contacts from your device.`
+      );
+    } catch {
+      setErrorMsg('Failed to sync device contacts.');
+    } finally {
+      setSyncingContacts(false);
+    }
+  };
+
+  const handleOpenContactChat = async (contact) => {
+    if (contact.threadId) {
+      router.push(`/chat/${contact.threadId}`);
+      return;
+    }
+    try {
+      const thread = await storageService.getOrCreateThreadForContact(contact);
+      router.push(`/chat/${thread.id}`);
+    } catch {
+      setErrorMsg('Failed to start conversation with contact.');
+    }
   };
 
   useEffect(() => {
@@ -305,7 +358,18 @@ export default function HomeScreen() {
           </Text>
         </View>
       ) : bottomTab === 'contacts' ? (
-        <ContactsCallList contacts={filteredContacts} scrollY={scrollY} />
+        <ContactsCallList
+          contacts={filteredContacts}
+          scrollY={scrollY}
+          onSyncContacts={handleSyncDeviceContacts}
+          syncingContacts={syncingContacts}
+          syncStatusText={
+            contactsMeta.count > 0
+              ? `${contactsMeta.count} synced from your phone`
+              : 'Sync phone contacts to message or call'
+          }
+          onOpenContactChat={handleOpenContactChat}
+        />
       ) : (
         <Animated.FlatList
           data={filteredThreads}

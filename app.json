@@ -26,6 +26,12 @@
     "plugins": [
       "expo-router",
       [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow ISD Messaging to sync your device contacts."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

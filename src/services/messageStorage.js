@@ -5,6 +5,7 @@ import {
   INITIAL_THREADS,
 } from './mockData';
 import { chatApi } from './chatApi';
+import { fetchDeviceContacts } from './deviceContacts';
 import { STORAGE_KEYS, readJson, removeKey, writeJson } from './storageHelpers';
 
 function threadMessagesKey(threadId) {
@@ -204,14 +205,20 @@ export const messageStorage = {
       threads.map((t) => t.contactName.toLowerCase())
     );
 
-    const directoryPool = await readJson(
-      STORAGE_KEYS.API_DIRECTORY,
-      DIRECTORY_CONTACTS
-    );
+    const [devicePool, directoryPool] = await Promise.all([
+      readJson(STORAGE_KEYS.DEVICE_CONTACTS, []),
+      readJson(STORAGE_KEYS.API_DIRECTORY, DIRECTORY_CONTACTS),
+    ]);
 
-    const newContacts = directoryPool
-      .filter((c) => !existingNames.has(c.contactName.toLowerCase()))
-      .map((c) => ({ ...c, hasExistingThread: false }));
+    const seenDirectoryNames = new Set(existingNames);
+    const newContacts = [];
+
+    for (const c of [...devicePool, ...directoryPool]) {
+      const key = (c.contactName || '').toLowerCase();
+      if (!key || seenDirectoryNames.has(key)) continue;
+      seenDirectoryNames.add(key);
+      newContacts.push({ ...c, hasExistingThread: false });
+    }
 
     const recentContacts = threads.map((t) => ({
       id: t.id,
@@ -226,6 +233,42 @@ export const messageStorage = {
     return {
       recent: recentContacts,
       directory: newContacts,
+    };
+  },
+
+  async syncDeviceContacts() {
+    const result = await fetchDeviceContacts();
+    if (!result.supported || result.status !== 'granted') {
+      return {
+        supported: result.supported,
+        status: result.status,
+        count: 0,
+        syncedAt: null,
+      };
+    }
+
+    const syncedAt = new Date().toISOString();
+    await Promise.all([
+      writeJson(STORAGE_KEYS.DEVICE_CONTACTS, result.contacts),
+      writeJson(STORAGE_KEYS.CONTACTS_SYNCED_AT, syncedAt),
+    ]);
+
+    return {
+      supported: true,
+      status: 'granted',
+      count: result.contacts.length,
+      syncedAt,
+    };
+  },
+
+  async getDeviceContactsMeta() {
+    const [contacts, syncedAt] = await Promise.all([
+      readJson(STORAGE_KEYS.DEVICE_CONTACTS, []),
+      readJson(STORAGE_KEYS.CONTACTS_SYNCED_AT, null),
+    ]);
+    return {
+      count: Array.isArray(contacts) ? contacts.length : 0,
+      syncedAt,
     };
   },
 

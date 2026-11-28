@@ -5,6 +5,8 @@ export const STORAGE_KEYS = {
   THREADS: '@messages_threads',
   THREAD_MESSAGES_PREFIX: '@messages_thread_',
   API_DIRECTORY: '@app_api_directory',
+  DEVICE_CONTACTS: '@app_device_contacts',
+  CONTACTS_SYNCED_AT: '@app_contacts_synced_at',
   SETTINGS: '@app_user_settings',
   SEEDED: '@app_seeded_v1',
 };
