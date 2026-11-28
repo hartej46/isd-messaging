@@ -1,16 +1,17 @@
 import React from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Pressable,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
-import { Phone, RefreshCw, User, Users } from 'lucide-react-native';
+import { Phone, RefreshCw, Users } from 'lucide-react-native';
 import { useTheme } from '@/hooks/use-theme';
 import { Spacing } from '@/constants/theme';
+import { dialPhoneNumber } from '@/utils/phone';
+import { SquircleAvatar } from './SquircleAvatar';
 
 export function ContactsCallList({
   contacts,
@@ -94,15 +95,14 @@ export function ContactsCallList({
                 onOpenContactChat(item);
                 return;
               }
-              Alert.alert(
-                'Voice Call',
-                `Calling ${item.contactName} (${item.phoneNumber})...`
-              );
+              dialPhoneNumber(item.phoneNumber, item.contactName);
             }}>
-            <View
-              style={[styles.avatar, { backgroundColor: theme.accentSurface }]}>
-              <User size={21} color={theme.accentOnSurface} strokeWidth={2.1} />
-            </View>
+            <SquircleAvatar
+              name={item.contactName}
+              color={item.avatarColor}
+              avatarUrl={item.avatarUrl}
+              size={44}
+            />
             <View style={styles.meta}>
               <Text style={[styles.name, { color: theme.text }]}>
                 {item.contactName}
@@ -115,10 +115,7 @@ export function ContactsCallList({
               hitSlop={8}
               onPress={(e) => {
                 e.stopPropagation();
-                Alert.alert(
-                  'Voice Call',
-                  `Calling ${item.contactName} (${item.phoneNumber})...`
-                );
+                dialPhoneNumber(item.phoneNumber, item.contactName);
               }}
               style={[styles.callBtn, { backgroundColor: theme.primaryLight }]}>
               <Phone size={18} color={theme.primary} strokeWidth={2.2} />

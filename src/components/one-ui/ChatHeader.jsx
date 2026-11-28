@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/hooks/use-theme';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from './SquircleAvatar';
+import { dialPhoneNumber } from '@/utils/phone';
 
 export function ChatHeader({
   thread,
@@ -65,16 +66,31 @@ export function ChatHeader({
         ) : null}
       </View>
 
-      <Pressable
-        onPress={onMenuPress}
-        hitSlop={10}
-        style={({ pressed }) => [
-          styles.menuBtn,
-          pressed && { backgroundColor: theme.backgroundElement },
-        ]}
-        accessibilityLabel="More thread options">
-        <Ionicons name="ellipsis-vertical" size={20} color={theme.text} />
-      </Pressable>
+      <View style={styles.rightActions}>
+        {thread?.phoneNumber ? (
+          <Pressable
+            onPress={() => dialPhoneNumber(thread.phoneNumber, thread.contactName)}
+            hitSlop={10}
+            style={({ pressed }) => [
+              styles.menuBtn,
+              pressed && { backgroundColor: theme.backgroundElement },
+            ]}
+            accessibilityLabel="Call contact">
+            <Ionicons name="call-outline" size={20} color={theme.text} />
+          </Pressable>
+        ) : null}
+
+        <Pressable
+          onPress={onMenuPress}
+          hitSlop={10}
+          style={({ pressed }) => [
+            styles.menuBtn,
+            pressed && { backgroundColor: theme.backgroundElement },
+          ]}
+          accessibilityLabel="More thread options">
+          <Ionicons name="ellipsis-vertical" size={20} color={theme.text} />
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -134,5 +150,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.pill,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
 });
