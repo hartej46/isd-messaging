@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
+  BackHandler,
   Alert,
   Pressable,
   ScrollView,
@@ -9,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
+  ChevronLeft,
   ChevronRight,
   Database,
   LogOut,
@@ -45,6 +47,14 @@ export default function ProfileScreen() {
   useFocusEffect(
     useCallback(() => {
       let isActive = true;
+      const backSubscription = BackHandler.addEventListener(
+        'hardwareBackPress',
+        () => {
+          router.replace('/');
+          return true;
+        }
+      );
+
       storageService
         .getStorageStats()
         .then((data) => {
@@ -55,9 +65,14 @@ export default function ProfileScreen() {
         });
       return () => {
         isActive = false;
+        backSubscription.remove();
       };
     }, [])
   );
+
+  const handleBackToHome = () => {
+    router.replace('/');
+  };
 
   const handleBottomTabSelect = (tabId) => {
     if (tabId === 'messages') {
@@ -83,6 +98,16 @@ export default function ProfileScreen() {
       style={[styles.safeArea, { backgroundColor: theme.backgroundElement }]}
       edges={['top', 'bottom']}>
       <View style={styles.header}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.backBtn,
+            pressed && { opacity: 0.6 },
+          ]}
+          onPress={handleBackToHome}
+          hitSlop={10}
+          accessibilityLabel="Back to home">
+          <ChevronLeft size={25} color={theme.text} strokeWidth={2} />
+        </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Profile</Text>
         <Pressable
           style={({ pressed }) => [
@@ -255,13 +280,20 @@ const styles = StyleSheet.create({
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.four,
   },
+  backBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
+    flex: 1,
     fontSize: 22,
     fontWeight: '600',
     letterSpacing: -0.4,
+    marginLeft: Spacing.two,
   },
   settingsBtn: {
     width: 36,

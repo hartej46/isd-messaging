@@ -1,58 +1,85 @@
-# Welcome to your Expo app 👋
+# ISD Messaging
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+ISD Messaging is a cross-platform messaging app built with Expo and React Native. It includes a message inbox, contacts, conversation threads, message search, profile and settings screens.
 
-## Get started
+> This is a demo application. It does not send real SMS messages or provide production authentication.
 
-1. Install dependencies
+## Features
 
-   ```bash
-   npm install
-   ```
+- Browse conversations, filter unread or pinned threads, and search conversations and messages.
+- View contacts and start a new conversation.
+- Send demo messages and see simulated delivery statuses and optional automatic replies.
+- Pin conversations, mark messages as read, clear conversation history, and manage threads.
+- Customize the theme and other app preferences.
+- Keep the demo session, conversations, messages, and preferences on the device.
 
-2. Start the app
+## Tech stack
 
-   ```bash
-   npx expo start
-   ```
+- **Expo SDK 58** and **React Native 0.88** for iOS, Android, and web.
+- **React 19** with JavaScript and JSX.
+- **Expo Router** for file-based navigation.
+- **AsyncStorage** for local session, settings, contacts, and conversation data.
+- **DummyJSON** for optional demo conversation/contact data and simulated replies. Local sample data is available as a fallback.
+- **React Native Safe Area Context**, **React Native Gesture Handler**, **React Native Reanimated**, Expo vector icons, and **Lucide React Native** for mobile UI and icons.
 
-In the output, you'll find options to open the app in a
+## Getting started
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Install the dependencies:
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Start the Expo development server:
 
-### Other setup steps
+```bash
+npm start
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Then open the app in Expo Go or a development build. Platform-specific commands are also available:
 
-## Learn more
+```bash
+npm run android
+npm run ios
+npm run web
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Useful commands
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Run the linter:
 
-## Join the community
+```bash
+npm run lint
+```
 
-Join our community of developers creating universal apps.
+Check the JavaScript project configuration with TypeScript:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# isd-messaging
+```bash
+npx tsc --noEmit -p jsconfig.json
+```
 
+## Project structure
+
+```text
+src/
+  app/          Expo Router screens and layouts
+  components/   Reusable UI components
+  constants/    Theme and shared constants
+  context/      Authentication and settings state
+  hooks/        Theme and color-scheme hooks
+  services/     Local storage, sample data, and demo API access
+  types/        Shared type definitions
+```
+
+The main routes are:
+
+- `src/app/index.jsx` — inbox and contacts tabs.
+- `src/app/chat/[id].jsx` — conversation thread.
+- `src/app/compose.jsx` — compose a message.
+- `src/app/profile.jsx` — profile and appearance settings.
+- `src/app/settings.jsx` — app settings.
+- `src/app/(auth)/login.jsx` — local demo sign-in.
+
+## Demo data and behavior
+
+The app stores its demo session, conversations, messages, and preferences in device storage using AsyncStorage. On first run, it attempts to load sample data from DummyJSON and falls back to bundled sample data when that request is unavailable. Sending messages and automatic replies are simulated; no message is delivered to a phone number.

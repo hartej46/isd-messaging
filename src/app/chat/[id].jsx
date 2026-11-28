@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
+  PanResponder,
   Platform,
   StyleSheet,
   Text,
@@ -71,6 +72,19 @@ export default function ChatThreadScreen() {
   const flatListRef = useRef(null);
   const timersRef = useRef([]);
   const isMountedRef = useRef(true);
+  const swipeBackResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (_, { dx, dy }) =>
+          dx < -30 && Math.abs(dx) > Math.abs(dy) * 1.5,
+        onPanResponderRelease: (_, { dx, vx }) => {
+          if (dx <= -100 || (dx <= -60 && vx <= -0.5)) {
+            router.back();
+          }
+        },
+      }),
+    []
+  );
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -291,7 +305,9 @@ export default function ChatThreadScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+    <SafeAreaView
+      {...swipeBackResponder.panHandlers}
+      style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
