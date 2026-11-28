@@ -62,7 +62,7 @@ export default function HomeScreen() {
     [...list].sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      return 0;
+      return (b.updatedAt || 0) - (a.updatedAt || 0);
     });
 
   const refreshData = useCallback(async () => {

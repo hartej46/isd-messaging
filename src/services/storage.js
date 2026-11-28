@@ -78,14 +78,12 @@ export const storageService = {
   async upsertThread(thread) {
     try {
       const threads = await this.getThreads();
-      const existingIndex = threads.findIndex((t) => t.id === thread.id);
-      let updated;
-      if (existingIndex >= 0) {
-        updated = [...threads];
-        updated[existingIndex] = thread;
-      } else {
-        updated = [thread, ...threads];
-      }
+      const filtered = threads.filter((t) => t.id !== thread.id);
+      const nextThread = {
+        ...thread,
+        updatedAt: thread.updatedAt || Date.now(),
+      };
+      const updated = [nextThread, ...filtered];
       await this.saveThreads(updated);
       return updated;
     } catch (error) {
@@ -201,9 +199,15 @@ export const storageService = {
       const threads = await this.getThreads();
       const threadIndex = threads.findIndex((t) => t.id === threadId);
       if (threadIndex >= 0) {
-        threads[threadIndex].lastMessage = message.text;
-        threads[threadIndex].timestamp = message.timestamp;
-        await this.saveThreads(threads);
+        const target = threads[threadIndex];
+        const movedThread = {
+          ...target,
+          lastMessage: message.text,
+          timestamp: message.timestamp,
+          updatedAt: Date.now(),
+        };
+        const remaining = threads.filter((t) => t.id !== threadId);
+        await this.saveThreads([movedThread, ...remaining]);
       }
 
       return updated;
