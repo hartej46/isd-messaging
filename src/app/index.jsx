@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   Pressable,
   RefreshControl,
@@ -10,20 +9,18 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  EllipsisVertical,
-  MessageSquare,
-  Phone,
-  Plus,
-  Search,
-  User,
-} from 'lucide-react-native';
+import { MessageSquare, Search } from 'lucide-react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
-import { Spacing } from '@/constants/theme';
+import { sortThreads } from '@/utils/formatters';
+import { BorderRadius, Spacing } from '@/constants/theme';
+import { HomeHeader } from '@/components/one-ui/HomeHeader';
+import { HomeFilterStrip } from '@/components/one-ui/HomeFilterStrip';
+import { ContactsCallList } from '@/components/one-ui/ContactsCallList';
 import { SearchBar } from '@/components/one-ui/SearchBar';
 import { ConversationItem } from '@/components/one-ui/ConversationItem';
 import { ComposeFAB } from '@/components/one-ui/ComposeFAB';
@@ -35,6 +32,8 @@ import { BottomNavBar } from '@/components/one-ui/BottomNavBar';
 export default function HomeScreen() {
   const theme = useTheme();
   const { logout } = useAuth();
+  const settingsContext = useSettings();
+  const showUnreadBadge = settingsContext?.settings?.notifications ?? true;
   const params = useLocalSearchParams();
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
 
@@ -45,6 +44,7 @@ export default function HomeScreen() {
   const [contactsList, setContactsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -58,23 +58,17 @@ export default function HomeScreen() {
 
   const [scrollY] = useState(() => new Animated.Value(0));
 
-  const sortThreads = (list) =>
-    [...list].sort((a, b) => {
-      if (a.isPinned && !b.isPinned) return -1;
-      if (!a.isPinned && b.isPinned) return 1;
-      return (b.updatedAt || 0) - (a.updatedAt || 0);
-    });
-
   const refreshData = useCallback(async () => {
     try {
+      setErrorMsg(null);
       const [threadData, contactData] = await Promise.all([
         storageService.getThreads(),
         storageService.getAllContacts(),
       ]);
       setThreads(sortThreads(threadData));
       setContactsList([...contactData.recent, ...contactData.directory]);
-    } catch (err) {
-      console.error('Failed to load home data:', err);
+    } catch {
+      setErrorMsg('Unable to load conversations. Pull down or tap retry.');
     }
   }, []);
 
@@ -84,13 +78,16 @@ export default function HomeScreen() {
       Promise.all([storageService.getThreads(), storageService.getAllContacts()])
         .then(([threadData, contactData]) => {
           if (!isActive) return;
+          setErrorMsg(null);
           setThreads(sortThreads(threadData));
           setContactsList([...contactData.recent, ...contactData.directory]);
           setLoading(false);
         })
-        .catch((err) => {
-          console.error('Failed to load threads:', err);
-          if (isActive) setLoading(false);
+        .catch(() => {
+          if (isActive) {
+            setErrorMsg('Unable to load conversations from storage.');
+            setLoading(false);
+          }
         });
 
       return () => {
@@ -113,12 +110,10 @@ export default function HomeScreen() {
     storageService
       .searchAllMessages(trimmed)
       .then((matches) => {
-        if (isActive) {
-          setMessageMatches(matches);
-        }
+        if (isActive) setMessageMatches(matches);
       })
-      .catch((err) => {
-        console.error('Failed to search messages:', err);
+      .catch(() => {
+        if (isActive) setErrorMsg('Search failed. Please try again.');
       });
 
     return () => {
@@ -128,9 +123,7 @@ export default function HomeScreen() {
 
   const handleSearchChange = (value) => {
     setSearchQuery(value);
-    if (!value.trim()) {
-      setMessageMatches([]);
-    }
+    if (!value.trim()) setMessageMatches([]);
   };
 
   const handleToggleSearch = () => {
@@ -147,8 +140,8 @@ export default function HomeScreen() {
     try {
       const updated = await storageService.togglePin(threadId);
       setThreads(sortThreads(updated));
-    } catch (err) {
-      console.error('Failed to toggle pin:', err);
+    } catch {
+      setErrorMsg('Could not update pin status.');
     }
   };
 
@@ -156,8 +149,8 @@ export default function HomeScreen() {
     try {
       const updated = await storageService.toggleRead(threadId);
       setThreads(sortThreads(updated));
-    } catch (err) {
-      console.error('Failed to toggle read:', err);
+    } catch {
+      setErrorMsg('Could not update read status.');
     }
   };
 
@@ -165,8 +158,8 @@ export default function HomeScreen() {
     try {
       const updated = await storageService.deleteThread(threadId);
       setThreads(sortThreads(updated));
-    } catch (err) {
-      console.error('Failed to delete thread:', err);
+    } catch {
+      setErrorMsg('Could not delete conversation.');
     }
   };
 
@@ -174,8 +167,8 @@ export default function HomeScreen() {
     try {
       const updated = await storageService.markAllAsRead();
       setThreads(sortThreads(updated));
-    } catch (err) {
-      console.error('Failed to mark all read:', err);
+    } catch {
+      setErrorMsg('Could not mark conversations as read.');
     }
   };
 
@@ -184,8 +177,8 @@ export default function HomeScreen() {
     try {
       await storageService.resetAllData();
       await refreshData();
-    } catch (err) {
-      console.error('Failed to reset data:', err);
+    } catch {
+      setErrorMsg('Failed to sync demo conversations.');
     } finally {
       setLoading(false);
     }
@@ -196,16 +189,11 @@ export default function HomeScreen() {
       try {
         const updated = await storageService.markThreadAsRead(thread.id);
         setThreads(sortThreads(updated));
-      } catch (err) {
-        console.error('Failed to mark thread read:', err);
+      } catch {
+        setErrorMsg('Failed to mark conversation as read.');
       }
     }
     router.push(`/chat/${thread.id}`);
-  };
-
-  const handleLongPressConversation = (thread) => {
-    setSelectedThread(thread);
-    setActionModalVisible(true);
   };
 
   const handleBottomTabSelect = (tabId) => {
@@ -229,7 +217,6 @@ export default function HomeScreen() {
 
       if (activeFilter === 'unread') return t.unreadCount > 0;
       if (activeFilter === 'starred') return t.isPinned;
-
       return true;
     });
   }, [threads, searchQuery, activeFilter]);
@@ -244,86 +231,17 @@ export default function HomeScreen() {
     );
   }, [contactsList, searchQuery]);
 
-  const headerHeight = scrollY.interpolate({
-    inputRange: [0, 110],
-    outputRange: [158, 52],
-    extrapolate: 'clamp',
-  });
-
-  const bigTitleOpacity = scrollY.interpolate({
-    inputRange: [0, 65],
-    outputRange: [1, 0],
-    extrapolate: 'clamp',
-  });
-
-  const compactTitleOpacity = scrollY.interpolate({
-    inputRange: [60, 105],
-    outputRange: [0, 1],
-    extrapolate: 'clamp',
-  });
-
-  const currentHeaderTitle = bottomTab === 'contacts' ? 'Contacts' : 'Messages';
-
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.backgroundElement }]}
       edges={['top', 'bottom']}>
-      <Animated.View
-        style={[
-          styles.collapsibleHeader,
-          {
-            height: headerHeight,
-            backgroundColor: theme.backgroundElement,
-          },
-        ]}>
-        <Animated.View
-          style={[
-            styles.expandedTitleWrap,
-            { opacity: bigTitleOpacity },
-          ]}
-          pointerEvents="none">
-          <Text style={[styles.expandedTitle, { color: theme.text }]}>
-            {currentHeaderTitle}
-          </Text>
-        </Animated.View>
-
-        <View style={styles.topActionBar}>
-          <Animated.Text
-            style={[
-              styles.compactTitle,
-              { color: theme.text, opacity: compactTitleOpacity },
-            ]}>
-            {currentHeaderTitle}
-          </Animated.Text>
-
-          <View style={styles.topIconsGroup}>
-            <Pressable
-              onPress={handleToggleSearch}
-              hitSlop={10}
-              style={({ pressed }) => [
-                styles.headerIconBtn,
-                pressed && { opacity: 0.6 },
-              ]}
-              accessibilityLabel="Search">
-              <Search
-                size={22}
-                color={searchOpen ? theme.primary : theme.text}
-                strokeWidth={2}
-              />
-            </Pressable>
-            <Pressable
-              onPress={() => setOverflowMenuVisible(true)}
-              hitSlop={10}
-              style={({ pressed }) => [
-                styles.headerIconBtn,
-                pressed && { opacity: 0.6 },
-              ]}
-              accessibilityLabel="More options">
-              <EllipsisVertical size={22} color={theme.text} strokeWidth={2} />
-            </Pressable>
-          </View>
-        </View>
-      </Animated.View>
+      <HomeHeader
+        title={bottomTab === 'contacts' ? 'Contacts' : 'Messages'}
+        scrollY={scrollY}
+        searchOpen={searchOpen}
+        onToggleSearch={handleToggleSearch}
+        onOpenMenu={() => setOverflowMenuVisible(true)}
+      />
 
       {searchOpen ? (
         <View style={styles.searchBarContainer}>
@@ -341,104 +259,32 @@ export default function HomeScreen() {
         </View>
       ) : null}
 
+      {errorMsg ? (
+        <Pressable
+          style={[
+            styles.errorBanner,
+            { backgroundColor: `${theme.danger}15`, borderColor: `${theme.danger}40` },
+          ]}
+          onPress={handleRefresh}>
+          <Text style={[styles.errorText, { color: theme.danger }]}>{errorMsg}</Text>
+          <Text style={[styles.retryText, { color: theme.danger }]}>Retry</Text>
+        </Pressable>
+      ) : null}
+
       {bottomTab === 'messages' ? (
-        <View style={styles.filterStrip}>
-          <Pressable
-            style={[
-              styles.filterTab,
-              activeFilter === 'all' && {
-                borderBottomWidth: 2,
-                borderBottomColor: theme.primary,
-              },
-            ]}
-            onPress={() => setActiveFilter('all')}>
-            <Text
-              style={[
-                styles.filterTabText,
-                {
-                  color:
-                    activeFilter === 'all' ? theme.primary : theme.textSecondary,
-                  fontWeight: activeFilter === 'all' ? '700' : '500',
-                },
-              ]}>
-              All
-            </Text>
-          </Pressable>
-
-          {showExtraFilters ? (
-            <>
-              <Pressable
-                style={[
-                  styles.filterTab,
-                  activeFilter === 'unread' && {
-                    borderBottomWidth: 2,
-                    borderBottomColor: theme.primary,
-                  },
-                ]}
-                onPress={() => setActiveFilter('unread')}>
-                <Text
-                  style={[
-                    styles.filterTabText,
-                    {
-                      color:
-                        activeFilter === 'unread'
-                          ? theme.primary
-                          : theme.textSecondary,
-                      fontWeight: activeFilter === 'unread' ? '700' : '500',
-                    },
-                  ]}>
-                  Unread
-                </Text>
-              </Pressable>
-
-              <Pressable
-                style={[
-                  styles.filterTab,
-                  activeFilter === 'starred' && {
-                    borderBottomWidth: 2,
-                    borderBottomColor: theme.primary,
-                  },
-                ]}
-                onPress={() => setActiveFilter('starred')}>
-                <Text
-                  style={[
-                    styles.filterTabText,
-                    {
-                      color:
-                        activeFilter === 'starred'
-                          ? theme.primary
-                          : theme.textSecondary,
-                      fontWeight: activeFilter === 'starred' ? '700' : '500',
-                    },
-                  ]}>
-                  Starred
-                </Text>
-              </Pressable>
-            </>
-          ) : null}
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.plusFilterBtn,
-              pressed && { opacity: 0.6 },
-            ]}
-            onPress={() => {
-              if (showExtraFilters) {
-                setShowExtraFilters(false);
-                setActiveFilter('all');
-              } else {
-                setShowExtraFilters(true);
-              }
-            }}
-            hitSlop={8}
-            accessibilityLabel="Toggle category filters">
-            <Plus
-              size={20}
-              color={showExtraFilters ? theme.primary : theme.textSecondary}
-              strokeWidth={1.8}
-            />
-          </Pressable>
-        </View>
+        <HomeFilterStrip
+          activeFilter={activeFilter}
+          onSelectFilter={setActiveFilter}
+          showExtraFilters={showExtraFilters}
+          onToggleExtraFilters={() => {
+            if (showExtraFilters) {
+              setShowExtraFilters(false);
+              setActiveFilter('all');
+            } else {
+              setShowExtraFilters(true);
+            }
+          }}
+        />
       ) : null}
 
       {loading ? (
@@ -449,64 +295,7 @@ export default function HomeScreen() {
           </Text>
         </View>
       ) : bottomTab === 'contacts' ? (
-        <Animated.FlatList
-          data={filteredContacts}
-          keyExtractor={(item) => item.id}
-          style={styles.flex}
-          contentContainerStyle={styles.listContainer}
-          showsVerticalScrollIndicator={false}
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { useNativeDriver: false }
-          )}
-          scrollEventThrottle={16}
-          renderItem={({ item, index }) => {
-            const isFirst = index === 0;
-            const isLast = index === filteredContacts.length - 1;
-            return (
-              <Pressable
-                style={({ pressed }) => [
-                  styles.contactCallRow,
-                  {
-                    backgroundColor: pressed ? theme.backgroundSelected : theme.card,
-                    borderTopLeftRadius: isFirst ? 26 : 0,
-                    borderTopRightRadius: isFirst ? 26 : 0,
-                    borderBottomLeftRadius: isLast ? 26 : 0,
-                    borderBottomRightRadius: isLast ? 26 : 0,
-                  },
-                ]}
-                onPress={() =>
-                  Alert.alert(
-                    'Voice Call',
-                    `Calling ${item.contactName} (${item.phoneNumber})...`
-                  )
-                }>
-                <View
-                  style={[
-                    styles.contactAvatar,
-                    { backgroundColor: theme.accentSurface },
-                  ]}>
-                  <User size={21} color={theme.accentOnSurface} strokeWidth={2.1} />
-                </View>
-                <View style={styles.contactMeta}>
-                  <Text style={[styles.contactName, { color: theme.text }]}>
-                    {item.contactName}
-                  </Text>
-                  <Text style={[styles.contactNumber, { color: theme.textSecondary }]}>
-                    {item.phoneNumber}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.callCircleBtn,
-                    { backgroundColor: theme.primaryLight },
-                  ]}>
-                  <Phone size={18} color={theme.primary} strokeWidth={2.2} />
-                </View>
-              </Pressable>
-            );
-          }}
-        />
+        <ContactsCallList contacts={filteredContacts} scrollY={scrollY} />
       ) : (
         <Animated.FlatList
           data={filteredThreads}
@@ -531,8 +320,12 @@ export default function HomeScreen() {
               thread={item}
               isFirst={index === 0}
               isLast={index === filteredThreads.length - 1}
+              showUnreadBadge={showUnreadBadge}
               onPress={handleOpenConversation}
-              onLongPress={handleLongPressConversation}
+              onLongPress={(thread) => {
+                setSelectedThread(thread);
+                setActionModalVisible(true);
+              }}
             />
           )}
           ListFooterComponent={
@@ -546,11 +339,7 @@ export default function HomeScreen() {
           }
           ListEmptyComponent={
             searchQuery.trim() && messageMatches.length > 0 ? null : (
-              <View
-                style={[
-                  styles.emptyCard,
-                  { backgroundColor: theme.card },
-                ]}>
+              <View style={[styles.emptyCard, { backgroundColor: theme.card }]}>
                 <View
                   style={[
                     styles.emptyIconCircle,
@@ -613,65 +402,30 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  collapsibleHeader: {
-    justifyContent: 'flex-end',
-    paddingHorizontal: Spacing.three + 2,
-    overflow: 'hidden',
-  },
-  expandedTitleWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 34,
-    alignItems: 'center',
-  },
-  expandedTitle: {
-    fontSize: 34,
-    fontWeight: '400',
-    letterSpacing: -0.6,
-  },
-  topActionBar: {
-    height: 52,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  compactTitle: {
-    fontSize: 21,
-    fontWeight: '600',
-    letterSpacing: -0.4,
-  },
-  topIconsGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  headerIconBtn: {
-    width: 34,
-    height: 34,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   searchBarContainer: {
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.two,
   },
-  filterStrip: {
+  errorBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
-    paddingBottom: Spacing.two + 2,
-    gap: 18,
+    justifyContent: 'space-between',
+    marginHorizontal: Spacing.three,
+    marginBottom: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+    borderRadius: BorderRadius.medium,
+    borderWidth: 1,
   },
-  filterTab: {
-    paddingBottom: 3,
+  errorText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
   },
-  filterTabText: {
-    fontSize: 15,
-  },
-  plusFilterBtn: {
-    padding: 2,
-    marginBottom: 2,
+  retryText: {
+    fontSize: 13,
+    fontWeight: '700',
+    marginLeft: Spacing.two,
   },
   listContainer: {
     paddingBottom: 86,
@@ -684,38 +438,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 14,
-  },
-  contactCallRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.three + 2,
-    paddingVertical: 13,
-    gap: 14,
-  },
-  contactAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  contactMeta: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactNumber: {
-    fontSize: 13,
-    marginTop: 2,
-  },
-  callCircleBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   emptyCard: {
     borderRadius: 26,

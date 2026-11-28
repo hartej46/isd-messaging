@@ -1,7 +1,6 @@
 import React, { useCallback, useState } from 'react';
 import {
   BackHandler,
-  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,11 +15,8 @@ import {
   LogOut,
   Mail,
   MessageSquare,
-  Moon,
   Settings,
   ShieldCheck,
-  Smartphone,
-  Sun,
   User,
 } from 'lucide-react-native';
 import { router, useFocusEffect } from 'expo-router';
@@ -29,14 +25,10 @@ import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
+import { confirmSignOut } from '@/utils/alerts';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { BottomNavBar } from '@/components/one-ui/BottomNavBar';
-
-const THEME_MODES = [
-  { id: 'system', label: 'System', Icon: Smartphone },
-  { id: 'light', label: 'Light', Icon: Sun },
-  { id: 'dark', label: 'Dark', Icon: Moon },
-];
+import { ThemeSelector } from '@/components/one-ui/ThemeSelector';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -70,10 +62,6 @@ export default function ProfileScreen() {
     }, [])
   );
 
-  const handleBackToHome = () => {
-    router.replace('/');
-  };
-
   const handleBottomTabSelect = (tabId) => {
     if (tabId === 'messages') {
       router.replace('/');
@@ -82,38 +70,21 @@ export default function ProfileScreen() {
     }
   };
 
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out of Messages?', [
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: logout,
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
-  };
-
   return (
     <SafeAreaView
       style={[styles.safeArea, { backgroundColor: theme.backgroundElement }]}
       edges={['top', 'bottom']}>
       <View style={styles.header}>
         <Pressable
-          style={({ pressed }) => [
-            styles.backBtn,
-            pressed && { opacity: 0.6 },
-          ]}
-          onPress={handleBackToHome}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}
+          onPress={() => router.replace('/')}
           hitSlop={10}
           accessibilityLabel="Back to home">
           <ChevronLeft size={25} color={theme.text} strokeWidth={2} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: theme.text }]}>Profile</Text>
         <Pressable
-          style={({ pressed }) => [
-            styles.settingsBtn,
-            pressed && { opacity: 0.6 },
-          ]}
+          style={({ pressed }) => [styles.iconBtn, pressed && { opacity: 0.6 }]}
           onPress={() => router.push('/settings')}
           hitSlop={10}
           accessibilityLabel="Open settings">
@@ -144,10 +115,7 @@ export default function ProfileScreen() {
               </Text>
             </View>
             <View
-              style={[
-                styles.statusBadge,
-                { backgroundColor: theme.primaryLight },
-              ]}>
+              style={[styles.statusBadge, { backgroundColor: theme.primaryLight }]}>
               <ShieldCheck size={14} color={theme.primary} />
               <Text style={[styles.statusText, { color: theme.primary }]}>
                 Local Account Active
@@ -192,39 +160,11 @@ export default function ProfileScreen() {
 
         <View style={[styles.card, { backgroundColor: theme.card }]}>
           <Text style={[styles.cardTitle, { color: theme.text }]}>Appearance</Text>
-          <View style={styles.themePillsRow}>
-            {THEME_MODES.map(({ id, label, Icon }) => {
-              const isSelected = settings.theme === id;
-              return (
-                <Pressable
-                  key={id}
-                  style={[
-                    styles.themePill,
-                    {
-                      backgroundColor: isSelected
-                        ? theme.primary
-                        : theme.backgroundElement,
-                    },
-                  ]}
-                  onPress={() => updateSettings({ theme: id })}>
-                  <Icon
-                    size={16}
-                    color={isSelected ? '#FFFFFF' : theme.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.themePillText,
-                      {
-                        color: isSelected ? '#FFFFFF' : theme.text,
-                        fontWeight: isSelected ? '700' : '500',
-                      },
-                    ]}>
-                    {label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ThemeSelector
+            value={settings.theme}
+            onChange={(nextTheme) => updateSettings({ theme: nextTheme })}
+            pillStyle
+          />
         </View>
 
         <View style={[styles.menuCard, { backgroundColor: theme.card }]}>
@@ -251,7 +191,7 @@ export default function ProfileScreen() {
               styles.menuRow,
               pressed && { backgroundColor: `${theme.danger}12` },
             ]}
-            onPress={handleSignOut}>
+            onPress={() => confirmSignOut(logout)}>
             <View
               style={[styles.menuIconWrap, { backgroundColor: `${theme.danger}18` }]}>
               <LogOut size={18} color={theme.danger} />
@@ -280,26 +220,19 @@ const styles = StyleSheet.create({
     height: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.four,
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.three,
   },
-  backBtn: {
+  iconBtn: {
     width: 36,
     height: 36,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    flex: 1,
     fontSize: 22,
     fontWeight: '600',
     letterSpacing: -0.4,
-    marginLeft: Spacing.two,
-  },
-  settingsBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   scrollContent: {
     paddingBottom: Spacing.four,
@@ -379,22 +312,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginBottom: Spacing.two + 2,
-  },
-  themePillsRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  themePill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: BorderRadius.pill,
-  },
-  themePillText: {
-    fontSize: 13,
   },
   menuCard: {
     borderRadius: 26,

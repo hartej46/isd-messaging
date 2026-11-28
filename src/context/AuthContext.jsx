@@ -1,24 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { storageService } from '@/services/storage';
+import { formatNameFromEmail } from '@/utils/formatters';
 
 const AuthContext = createContext(undefined);
-
-function formatNameFromEmail(email) {
-  const localPart = email.split('@')[0] || 'User';
-
-  const parts = localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
-
-  const name = parts.length > 0 ? parts.join(' ') : 'Galaxy User';
-  const initials =
-    parts.length >= 2
-      ? (parts[0][0] + parts[1][0]).toUpperCase()
-      : (parts[0] ? parts[0].substring(0, 2) : 'GU').toUpperCase();
-
-  return { name, initials };
-}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -31,7 +15,6 @@ export function AuthProvider({ children }) {
         if (session) {
           setUser(session);
         }
-
         await storageService.seedInitialData();
       } catch (err) {
         console.error('Error during auth initialization:', err);

@@ -17,14 +17,37 @@ import { useAuth } from '@/context/AuthContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
+import { confirmSignOut } from '@/utils/alerts';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from '@/components/one-ui/SquircleAvatar';
+import { ThemeSelector } from '@/components/one-ui/ThemeSelector';
 
-const THEME_OPTIONS = [
-  { id: 'system', label: 'System', icon: 'phone-portrait-outline' },
-  { id: 'light', label: 'Light', icon: 'sunny-outline' },
-  { id: 'dark', label: 'Dark', icon: 'moon-outline' },
-];
+function SettingsActionRow({
+  iconName,
+  iconColor,
+  label,
+  labelColor,
+  chevronColor,
+  disabled,
+  onPress,
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      style={({ pressed }) => [
+        styles.actionRow,
+        pressed && { backgroundColor: theme.backgroundElement },
+      ]}
+      disabled={disabled}
+      onPress={onPress}>
+      <View style={styles.settingIconBox}>
+        <Ionicons name={iconName} size={20} color={iconColor} />
+      </View>
+      <Text style={[styles.actionRowText, { color: labelColor }]}>{label}</Text>
+      <Ionicons name="chevron-forward" size={18} color={chevronColor} />
+    </Pressable>
+  );
+}
 
 export default function SettingsScreen() {
   const theme = useTheme();
@@ -36,12 +59,8 @@ export default function SettingsScreen() {
   const loadStats = useCallback(() => {
     storageService
       .getStorageStats()
-      .then((data) => {
-        setStats(data);
-      })
-      .catch((err) => {
-        console.error('Failed to load storage stats:', err);
-      });
+      .then((data) => setStats(data))
+      .catch((err) => console.error('Failed to load storage stats:', err));
   }, []);
 
   useFocusEffect(
@@ -52,9 +71,7 @@ export default function SettingsScreen() {
         .then((data) => {
           if (isActive) setStats(data);
         })
-        .catch((err) => {
-          console.error('Failed to load storage stats:', err);
-        });
+        .catch((err) => console.error('Failed to load storage stats:', err));
       return () => {
         isActive = false;
       };
@@ -67,8 +84,8 @@ export default function SettingsScreen() {
     try {
       await storageService.markAllAsRead();
       Alert.alert('Done', 'All conversations have been marked as read.');
-    } catch (err) {
-      console.error('Failed to mark all as read:', err);
+    } catch {
+      Alert.alert('Error', 'Could not mark conversations as read.');
     } finally {
       setBusyAction(false);
     }
@@ -83,9 +100,7 @@ export default function SettingsScreen() {
         title: 'Messages Local Backup',
         message: backupJson,
       });
-      if (result.action === Share.dismissedAction) {
-        return;
-      }
+      if (result.action === Share.dismissedAction) return;
     } catch {
       Alert.alert(
         'Export Backup Ready',
@@ -96,7 +111,7 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleResetDemo = () => {
+  const handleSyncApi = () => {
     Alert.alert(
       'Sync DummyJSON API',
       'Fetch fresh contacts and conversations from DummyJSON API? Current local chats will be replaced.',
@@ -144,8 +159,8 @@ export default function SettingsScreen() {
               await storageService.clearAllThreadsAndMessages();
               loadStats();
               Alert.alert('Cleared', 'All local conversations have been deleted.');
-            } catch (err) {
-              console.error('Failed to clear messages:', err);
+            } catch {
+              Alert.alert('Error', 'Could not clear local conversations.');
             } finally {
               setBusyAction(false);
             }
@@ -154,17 +169,6 @@ export default function SettingsScreen() {
         { text: 'Cancel', style: 'cancel' },
       ]
     );
-  };
-
-  const handleSignOut = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out of Messages?', [
-      {
-        text: 'Sign Out',
-        style: 'destructive',
-        onPress: logout,
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
   };
 
   return (
@@ -228,41 +232,10 @@ export default function SettingsScreen() {
           <Text style={[styles.cardGroupTitle, { color: theme.text }]}>
             App Theme
           </Text>
-          <View style={styles.themeRow}>
-            {THEME_OPTIONS.map((option) => {
-              const isSelected = settings.theme === option.id;
-              return (
-                <Pressable
-                  key={option.id}
-                  style={[
-                    styles.themeOption,
-                    {
-                      backgroundColor: isSelected
-                        ? theme.primary
-                        : theme.backgroundElement,
-                      borderColor: isSelected ? theme.primary : theme.border,
-                    },
-                  ]}
-                  onPress={() => updateSettings({ theme: option.id })}>
-                  <Ionicons
-                    name={option.icon}
-                    size={18}
-                    color={isSelected ? '#FFFFFF' : theme.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.themeOptionText,
-                      {
-                        color: isSelected ? '#FFFFFF' : theme.text,
-                        fontWeight: isSelected ? '700' : '600',
-                      },
-                    ]}>
-                    {option.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
+          <ThemeSelector
+            value={settings.theme}
+            onChange={(nextTheme) => updateSettings({ theme: nextTheme })}
+          />
         </View>
 
         <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>
@@ -348,75 +321,51 @@ export default function SettingsScreen() {
 
           <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionRow,
-              pressed && { backgroundColor: theme.backgroundElement },
-            ]}
+          <SettingsActionRow
+            iconName="checkmark-done-outline"
+            iconColor={theme.primary}
+            label="Mark all conversations as read"
+            labelColor={theme.text}
+            chevronColor={theme.textTertiary}
             disabled={busyAction}
-            onPress={handleMarkAllRead}>
-            <View style={styles.settingIconBox}>
-              <Ionicons name="checkmark-done-outline" size={20} color={theme.primary} />
-            </View>
-            <Text style={[styles.actionRowText, { color: theme.text }]}>
-              Mark all conversations as read
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-          </Pressable>
+            onPress={handleMarkAllRead}
+          />
 
           <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionRow,
-              pressed && { backgroundColor: theme.backgroundElement },
-            ]}
+          <SettingsActionRow
+            iconName="refresh-outline"
+            iconColor={theme.text}
+            label="Sync DummyJSON API data"
+            labelColor={theme.text}
+            chevronColor={theme.textTertiary}
             disabled={busyAction}
-            onPress={handleResetDemo}>
-            <View style={styles.settingIconBox}>
-              <Ionicons name="refresh-outline" size={20} color={theme.text} />
-            </View>
-            <Text style={[styles.actionRowText, { color: theme.text }]}>
-              Sync DummyJSON API data
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-          </Pressable>
+            onPress={handleSyncApi}
+          />
 
           <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionRow,
-              pressed && { backgroundColor: theme.backgroundElement },
-            ]}
+          <SettingsActionRow
+            iconName="download-outline"
+            iconColor={theme.primary}
+            label="Export local backup"
+            labelColor={theme.text}
+            chevronColor={theme.textTertiary}
             disabled={busyAction}
-            onPress={handleExportBackup}>
-            <View style={styles.settingIconBox}>
-              <Ionicons name="download-outline" size={20} color={theme.primary} />
-            </View>
-            <Text style={[styles.actionRowText, { color: theme.text }]}>
-              Export local backup
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
-          </Pressable>
+            onPress={handleExportBackup}
+          />
 
           <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
 
-          <Pressable
-            style={({ pressed }) => [
-              styles.actionRow,
-              pressed && { backgroundColor: `${theme.danger}12` },
-            ]}
+          <SettingsActionRow
+            iconName="trash-outline"
+            iconColor={theme.danger}
+            label="Clear all local messages"
+            labelColor={theme.danger}
+            chevronColor={theme.danger}
             disabled={busyAction}
-            onPress={handleClearAllMessages}>
-            <View style={styles.settingIconBox}>
-              <Ionicons name="trash-outline" size={20} color={theme.danger} />
-            </View>
-            <Text style={[styles.actionRowText, { color: theme.danger }]}>
-              Clear all local messages
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={theme.danger} />
-          </Pressable>
+            onPress={handleClearAllMessages}
+          />
         </View>
 
         <Pressable
@@ -427,7 +376,7 @@ export default function SettingsScreen() {
               borderColor: theme.danger,
             },
           ]}
-          onPress={handleSignOut}>
+          onPress={() => confirmSignOut(logout)}>
           <Ionicons name="log-out-outline" size={20} color={theme.danger} />
           <Text style={[styles.signOutText, { color: theme.danger }]}>
             Sign Out
@@ -530,23 +479,6 @@ const styles = StyleSheet.create({
   cardGroupTitle: {
     fontSize: 15,
     fontWeight: '700',
-  },
-  themeRow: {
-    flexDirection: 'row',
-    gap: Spacing.two,
-  },
-  themeOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 11,
-    borderRadius: BorderRadius.medium,
-    borderWidth: 1,
-  },
-  themeOptionText: {
-    fontSize: 13,
   },
   listCard: {
     borderRadius: BorderRadius.card,

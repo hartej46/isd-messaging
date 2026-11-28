@@ -3,7 +3,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,17 +15,10 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
 import { chatApi } from '@/services/chatApi';
-import { AVATAR_COLORS } from '@/services/mockData';
+import { formatShortTime, pickAvatarColor } from '@/utils/formatters';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { SquircleAvatar } from '@/components/one-ui/SquircleAvatar';
-
-function pickAvatarColor(name) {
-  let sum = 0;
-  for (let i = 0; i < name.length; i += 1) {
-    sum += name.charCodeAt(i);
-  }
-  return AVATAR_COLORS[sum % AVATAR_COLORS.length];
-}
+import { ContactPickerList } from '@/components/one-ui/ContactPickerList';
 
 export default function ComposeScreen() {
   const theme = useTheme();
@@ -104,11 +96,7 @@ export default function ComposeScreen() {
           t.phoneNumber === cleanRecipient
       );
 
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
+      const timeStr = formatShortTime();
 
       if (!matchedThread) {
         matchedThread = {
@@ -187,7 +175,6 @@ export default function ComposeScreen() {
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-
         <View style={styles.appBar}>
           <Pressable
             style={styles.backBtn}
@@ -200,10 +187,7 @@ export default function ComposeScreen() {
         </View>
 
         <View
-          style={[
-            styles.recipientContainer,
-            { borderBottomColor: theme.border },
-          ]}>
+          style={[styles.recipientContainer, { borderBottomColor: theme.border }]}>
           <Text style={[styles.toLabel, { color: theme.textSecondary }]}>To</Text>
           {selectedContact ? (
             <View
@@ -238,166 +222,20 @@ export default function ComposeScreen() {
           )}
         </View>
 
-        <ScrollView
-          style={styles.suggestionsScroll}
-          contentContainerStyle={styles.suggestionsContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}>
-
-          {!selectedContact && query.trim().length > 0 && !exactMatchExists ? (
-            <Pressable
-              style={({ pressed }) => [
-                styles.customRecipientCard,
-                {
-                  backgroundColor: theme.primaryLight,
-                  borderColor: theme.primary,
-                  opacity: pressed ? 0.85 : 1,
-                },
-              ]}
-              onPress={() =>
-                handleSelectContact({
-                  id: `custom_${Date.now()}`,
-                  contactName: query.trim(),
-                  phoneNumber: query.trim(),
-                  avatarColor: pickAvatarColor(query.trim()),
-                  category: 'personal',
-                  hasExistingThread: false,
-                })
-              }>
-              <View
-                style={[styles.customIconCircle, { backgroundColor: theme.primary }]}>
-                <Ionicons name="person-add-outline" size={18} color="#FFFFFF" />
-              </View>
-              <View style={styles.contactDetails}>
-                <Text style={[styles.customTitle, { color: theme.primaryDark }]}>
-                  Send to &quot;{query.trim()}&quot;
-                </Text>
-                <Text style={[styles.customSub, { color: theme.primary }]}>
-                  Tap to select new recipient
-                </Text>
-              </View>
-            </Pressable>
-          ) : null}
-
-          {filteredRecent.length > 0 ? (
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
-                RECENT CONVERSATIONS
-              </Text>
-              {filteredRecent.map((contact) => {
-                const isSelected = selectedContact?.id === contact.id;
-                return (
-                  <Pressable
-                    key={contact.id}
-                    style={({ pressed }) => [
-                      styles.contactRow,
-                      {
-                        backgroundColor: isSelected
-                          ? theme.primaryLight
-                          : pressed
-                            ? theme.backgroundElement
-                            : 'transparent',
-                      },
-                    ]}
-                    onPress={() => handleSelectContact(contact)}>
-                    <SquircleAvatar
-                      initials={contact.contactName}
-                      size={42}
-                      backgroundColor={contact.avatarColor}
-                    />
-                    <View style={styles.contactDetails}>
-                      <Text style={[styles.contactName, { color: theme.text }]}>
-                        {contact.contactName}
-                      </Text>
-                      <Text style={[styles.contactPhone, { color: theme.textSecondary }]}>
-                        {contact.phoneNumber}
-                      </Text>
-                    </View>
-                    <Pressable
-                      style={[
-                        styles.openChatBadge,
-                        { backgroundColor: theme.backgroundElement },
-                      ]}
-                      onPress={() => handleOpenExistingChat(contact)}
-                      hitSlop={6}>
-                      <Text style={[styles.openChatText, { color: theme.primary }]}>
-                        Open
-                      </Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={13}
-                        color={theme.primary}
-                      />
-                    </Pressable>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-
-          {filteredDirectory.length > 0 ? (
-            <View style={styles.sectionBlock}>
-              <Text style={[styles.sectionHeading, { color: theme.textTertiary }]}>
-                CONTACTS DIRECTORY
-              </Text>
-              {filteredDirectory.map((contact) => {
-                const isSelected = selectedContact?.id === contact.id;
-                return (
-                  <Pressable
-                    key={contact.id}
-                    style={({ pressed }) => [
-                      styles.contactRow,
-                      {
-                        backgroundColor: isSelected
-                          ? theme.primaryLight
-                          : pressed
-                            ? theme.backgroundElement
-                            : 'transparent',
-                      },
-                    ]}
-                    onPress={() => handleSelectContact(contact)}>
-                    <SquircleAvatar
-                      initials={contact.contactName}
-                      size={42}
-                      backgroundColor={contact.avatarColor}
-                    />
-                    <View style={styles.contactDetails}>
-                      <Text style={[styles.contactName, { color: theme.text }]}>
-                        {contact.contactName}
-                      </Text>
-                      <Text style={[styles.contactPhone, { color: theme.textSecondary }]}>
-                        {contact.phoneNumber}
-                      </Text>
-                    </View>
-                    {contact.category === 'business' ? (
-                      <View
-                        style={[
-                          styles.categoryPill,
-                          { backgroundColor: theme.backgroundElement },
-                        ]}>
-                        <Text
-                          style={[
-                            styles.categoryPillText,
-                            { color: theme.textSecondary },
-                          ]}>
-                          Business
-                        </Text>
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-        </ScrollView>
+        <ContactPickerList
+          query={query}
+          selectedContact={selectedContact}
+          exactMatchExists={exactMatchExists}
+          recentContacts={filteredRecent}
+          directoryContacts={filteredDirectory}
+          onSelectContact={handleSelectContact}
+          onOpenExistingChat={handleOpenExistingChat}
+        />
 
         <View
           style={[
             styles.bottomInputBar,
-            {
-              backgroundColor: theme.card,
-              borderTopColor: theme.border,
-            },
+            { backgroundColor: theme.card, borderTopColor: theme.border },
           ]}>
           <View
             style={[
@@ -496,88 +334,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
     height: 40,
-  },
-  suggestionsScroll: {
-    flex: 1,
-  },
-  suggestionsContent: {
-    paddingHorizontal: Spacing.four,
-    paddingTop: Spacing.two,
-    paddingBottom: Spacing.four,
-  },
-  customRecipientCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.three,
-    borderRadius: BorderRadius.card,
-    borderWidth: 1,
-    gap: Spacing.three,
-    marginTop: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  customIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  customTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  customSub: {
-    fontSize: 12,
-    marginTop: 1,
-  },
-  sectionBlock: {
-    marginBottom: Spacing.three,
-  },
-  sectionHeading: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.8,
-    marginVertical: Spacing.two,
-  },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    gap: Spacing.three,
-    borderRadius: BorderRadius.medium,
-  },
-  contactDetails: {
-    flex: 1,
-  },
-  contactName: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactPhone: {
-    fontSize: 13,
-    marginTop: 1,
-  },
-  openChatBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: BorderRadius.pill,
-    gap: 2,
-  },
-  openChatText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  categoryPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: BorderRadius.pill,
-  },
-  categoryPillText: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   bottomInputBar: {
     padding: Spacing.three,

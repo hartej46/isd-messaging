@@ -8,10 +8,12 @@ export function ConversationItem({
   thread,
   isFirst = false,
   isLast = false,
+  showUnreadBadge = true,
   onPress,
   onLongPress,
 }) {
   const theme = useTheme();
+  const hasUnread = showUnreadBadge && thread.unreadCount > 0;
 
   return (
     <Pressable
@@ -40,7 +42,7 @@ export function ConversationItem({
                 styles.name,
                 {
                   color: theme.text,
-                  fontWeight: thread.unreadCount > 0 ? '700' : '600',
+                  fontWeight: hasUnread ? '700' : '600',
                 },
               ]}
               numberOfLines={1}>
@@ -54,8 +56,8 @@ export function ConversationItem({
             style={[
               styles.timestamp,
               {
-                color: thread.unreadCount > 0 ? theme.primary : theme.textTertiary,
-                fontWeight: thread.unreadCount > 0 ? '700' : '400',
+                color: hasUnread ? theme.primary : theme.textTertiary,
+                fontWeight: hasUnread ? '700' : '400',
               },
             ]}>
             {thread.timestamp}
@@ -67,14 +69,14 @@ export function ConversationItem({
             style={[
               styles.preview,
               {
-                color: thread.unreadCount > 0 ? theme.text : theme.textSecondary,
-                fontWeight: thread.unreadCount > 0 ? '600' : '400',
+                color: hasUnread ? theme.text : theme.textSecondary,
+                fontWeight: hasUnread ? '600' : '400',
               },
             ]}
             numberOfLines={2}>
             {thread.lastMessage}
           </Text>
-          {thread.unreadCount > 0 ? (
+          {hasUnread ? (
             <View
               style={[
                 styles.unreadBadge,

@@ -18,41 +18,13 @@ import { useTheme } from '@/hooks/use-theme';
 import { useSettings } from '@/context/SettingsContext';
 import { storageService } from '@/services/storage';
 import { chatApi } from '@/services/chatApi';
+import { formatShortTime } from '@/utils/formatters';
+import { pickContextualReply } from '@/utils/replyGenerator';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { ChatHeader } from '@/components/one-ui/ChatHeader';
 import { MessageBubble } from '@/components/one-ui/MessageBubble';
 import { ChatInputBar } from '@/components/one-ui/ChatInputBar';
 import { ChatOptionsModal } from '@/components/one-ui/ChatOptionsModal';
-
-const AUTO_REPLY_POOL = [
-  'Got it, thanks for letting me know!',
-  'Sounds like a plan 👍',
-  'Let me check and get back to you in a bit.',
-  'Awesome, talk soon!',
-  'That works great for me.',
-  'Thanks! Will keep you posted.',
-];
-
-function pickContextualReply(outgoingText, contactName) {
-  const lower = outgoingText.toLowerCase();
-  if (lower.includes('hi') || lower.includes('hello') || lower.includes('hey')) {
-    return `Hey! How is it going?`;
-  }
-  if (lower.includes('?')) {
-    return `Good question — let me double check and get right back to you.`;
-  }
-  if (lower.includes('thank')) {
-    return `You are very welcome! 😊`;
-  }
-  if (lower.includes('call') || lower.includes('meet') || lower.includes('lunch')) {
-    return `Sure thing! Just let me know when you are free.`;
-  }
-  if (contactName && contactName.toLowerCase().includes('bank')) {
-    return 'Automated Alert: Your message has been received. Reply HELP for assistance.';
-  }
-  const index = outgoingText.length % AUTO_REPLY_POOL.length;
-  return AUTO_REPLY_POOL[index];
-}
 
 export default function ChatThreadScreen() {
   const theme = useTheme();
@@ -65,6 +37,7 @@ export default function ChatThreadScreen() {
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(Boolean(threadId));
+  const [errorMsg, setErrorMsg] = useState(null);
   const [isSending, setIsSending] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
@@ -103,13 +76,16 @@ export default function ChatThreadScreen() {
     ])
       .then(([loadedThread, loadedMessages]) => {
         if (!isMountedRef.current) return;
+        setErrorMsg(null);
         setThread(loadedThread);
         setMessages(loadedMessages);
         setLoading(false);
       })
-      .catch((err) => {
-        console.error('Failed to load chat thread:', err);
-        if (isMountedRef.current) setLoading(false);
+      .catch(() => {
+        if (isMountedRef.current) {
+          setErrorMsg('Failed to load conversation messages.');
+          setLoading(false);
+        }
       });
 
     return () => {
@@ -129,22 +105,17 @@ export default function ChatThreadScreen() {
     if (!cleanText || !threadId || isSending) return;
 
     setIsSending(true);
+    setErrorMsg(null);
     if (rawText === undefined || rawText === inputText) {
       setInputText('');
     }
-
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
 
     const newMessage = {
       id: `msg_${Date.now()}`,
       threadId,
       text: cleanText,
       sender: 'me',
-      timestamp: timeStr,
+      timestamp: formatShortTime(),
       status: 'sent',
     };
 
@@ -167,9 +138,7 @@ export default function ChatThreadScreen() {
           newMessage.id,
           'delivered'
         );
-        if (isMountedRef.current) {
-          setMessages(deliveredList);
-        }
+        if (isMountedRef.current) setMessages(deliveredList);
       }, 450);
       timersRef.current.push(deliveryTimer);
 
@@ -191,16 +160,12 @@ export default function ChatThreadScreen() {
           const replyText =
             remoteReply || pickContextualReply(cleanText, thread?.contactName || '');
 
-          const replyTime = new Date().toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit',
-          });
           const replyMsg = {
             id: `msg_reply_${Date.now()}`,
             threadId,
             text: replyText,
             sender: 'them',
-            timestamp: replyTime,
+            timestamp: formatShortTime(),
             status: 'read',
           };
 
@@ -215,12 +180,10 @@ export default function ChatThreadScreen() {
         }, 1800);
         timersRef.current.push(replyTimer);
       }
-    } catch (err) {
-      console.error('Failed to send message:', err);
+    } catch {
+      if (isMountedRef.current) setErrorMsg('Could not send message.');
     } finally {
-      if (isMountedRef.current) {
-        setIsSending(false);
-      }
+      if (isMountedRef.current) setIsSending(false);
     }
   };
 
@@ -235,11 +198,9 @@ export default function ChatThreadScreen() {
           onPress: async () => {
             try {
               const updated = await storageService.deleteMessage(threadId, msg.id);
-              if (isMountedRef.current) {
-                setMessages(updated);
-              }
-            } catch (err) {
-              console.error('Failed to delete message:', err);
+              if (isMountedRef.current) setMessages(updated);
+            } catch {
+              if (isMountedRef.current) setErrorMsg('Failed to delete message.');
             }
           },
         },
@@ -253,8 +214,8 @@ export default function ChatThreadScreen() {
     try {
       await storageService.togglePin(thread.id);
       setThread((prev) => (prev ? { ...prev, isPinned: !prev.isPinned } : prev));
-    } catch (err) {
-      console.error('Failed to toggle pin:', err);
+    } catch {
+      setErrorMsg('Failed to update pin status.');
     }
   };
 
@@ -269,11 +230,9 @@ export default function ChatThreadScreen() {
           onPress: async () => {
             try {
               await storageService.clearThreadMessages(threadId);
-              if (isMountedRef.current) {
-                setMessages([]);
-              }
-            } catch (err) {
-              console.error('Failed to clear thread history:', err);
+              if (isMountedRef.current) setMessages([]);
+            } catch {
+              setErrorMsg('Failed to clear messages.');
             }
           },
         },
@@ -294,8 +253,8 @@ export default function ChatThreadScreen() {
             try {
               await storageService.deleteThread(threadId);
               router.replace('/');
-            } catch (err) {
-              console.error('Failed to delete thread:', err);
+            } catch {
+              setErrorMsg('Failed to delete conversation.');
             }
           },
         },
@@ -310,15 +269,25 @@ export default function ChatThreadScreen() {
       style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}>
-
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ChatHeader
           thread={thread}
           onBack={() => router.back()}
           onTitlePress={() => setOptionsVisible(true)}
           onMenuPress={() => setOptionsVisible(true)}
         />
+
+        {errorMsg ? (
+          <View
+            style={[
+              styles.errorBanner,
+              { backgroundColor: `${theme.danger}15` },
+            ]}>
+            <Text style={[styles.errorText, { color: theme.danger }]}>
+              {errorMsg}
+            </Text>
+          </View>
+        ) : null}
 
         {loading ? (
           <View
@@ -421,6 +390,15 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  errorBanner: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  errorText: {
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   listContent: {
     paddingTop: Spacing.three,

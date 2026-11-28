@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { hideAsync, preventAutoHideAsync } from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { Animated, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import {
   DarkTheme,
   DefaultTheme,
@@ -13,18 +13,15 @@ import {
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
+import { LaunchIntroOverlay } from '@/components/one-ui/LaunchIntroOverlay';
 
 preventAutoHideAsync();
 
-/** @param {{ isDark: boolean }} props */
 function NavigationProtector({ isDark }) {
   const { user, isLoading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
-  const [showLaunchIntro, setShowLaunchIntro] = useState(Platform.OS === 'android');
-  const [launchOverlayOpacity] = useState(() => new Animated.Value(1));
-  const [launchTitleOpacity] = useState(() => new Animated.Value(0));
-  const [launchTitleScale] = useState(() => new Animated.Value(1.18));
+  const [introVisible, setIntroVisible] = useState(Platform.OS === 'android');
 
   useEffect(() => {
     if (isLoading) return;
@@ -42,50 +39,9 @@ function NavigationProtector({ isDark }) {
     }
   }, [user, isLoading, segments, router]);
 
-  useEffect(() => {
-    if (Platform.OS !== 'android' || isLoading || !showLaunchIntro) {
-      return undefined;
-    }
-
-    const animation = Animated.sequence([
-      Animated.parallel([
-        Animated.timing(launchTitleOpacity, {
-          toValue: 1,
-          duration: 260,
-          useNativeDriver: true,
-        }),
-        Animated.timing(launchTitleScale, {
-          toValue: 1,
-          duration: 620,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.delay(180),
-      Animated.timing(launchOverlayOpacity, {
-        toValue: 0,
-        duration: 280,
-        useNativeDriver: true,
-      }),
-    ]);
-
-    animation.start(({ finished }) => {
-      if (finished) {
-        setShowLaunchIntro(false);
-      }
-    });
-
-    return () => animation.stop();
-  }, [
-    isLoading,
-    launchOverlayOpacity,
-    launchTitleOpacity,
-    launchTitleScale,
-    showLaunchIntro,
-  ]);
-
   return (
     <View style={styles.root}>
-      <StatusBar style={showLaunchIntro ? 'light' : isDark ? 'light' : 'dark'} />
+      <StatusBar style={introVisible ? 'light' : isDark ? 'light' : 'dark'} />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -99,22 +55,10 @@ function NavigationProtector({ isDark }) {
         <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack>
-      {showLaunchIntro ? (
-        <Animated.View
-          pointerEvents="auto"
-          style={[styles.launchOverlay, { opacity: launchOverlayOpacity }]}>
-          <Animated.Text
-            style={[
-              styles.launchTitle,
-              {
-                opacity: launchTitleOpacity,
-                transform: [{ scale: launchTitleScale }],
-              },
-            ]}>
-            Messages
-          </Animated.Text>
-        </Animated.View>
-      ) : null}
+      <LaunchIntroOverlay
+        isLoading={isLoading}
+        onVisibilityChange={setIntroVisible}
+      />
     </View>
   );
 }
@@ -143,23 +87,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-  },
-  launchOverlay: {
-    alignItems: 'center',
-    backgroundColor: '#208AEF',
-    elevation: 1,
-    justifyContent: 'center',
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    zIndex: 1,
-  },
-  launchTitle: {
-    color: '#FFFFFF',
-    fontSize: 34,
-    fontWeight: '700',
-    letterSpacing: -0.5,
   },
 });

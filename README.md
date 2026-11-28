@@ -67,8 +67,8 @@ src/
   constants/    Theme and shared constants
   context/      Authentication and settings state
   hooks/        Theme and color-scheme hooks
-  services/     Local storage, sample data, and demo API access
-  types/        Shared type definitions
+  services/     Local storage repositories, sample data, and demo API access
+  utils/        Shared formatting, alert, and reply helper functions
 ```
 
 The main routes are:
