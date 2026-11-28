@@ -3,6 +3,7 @@ import {
   Alert,
   Pressable,
   ScrollView,
+  Share,
   StyleSheet,
   Switch,
   Text,
@@ -68,6 +69,28 @@ export default function SettingsScreen() {
       Alert.alert('Done', 'All conversations have been marked as read.');
     } catch (err) {
       console.error('Failed to mark all as read:', err);
+    } finally {
+      setBusyAction(false);
+    }
+  };
+
+  const handleExportBackup = async () => {
+    if (busyAction) return;
+    setBusyAction(true);
+    try {
+      const backupJson = await storageService.exportBackupData();
+      const result = await Share.share({
+        title: 'Messages Local Backup',
+        message: backupJson,
+      });
+      if (result.action === Share.dismissedAction) {
+        return;
+      }
+    } catch {
+      Alert.alert(
+        'Export Backup Ready',
+        `Prepared local backup (${stats.threadCount} conversations, ${stats.messageCount} messages). Share sheet is unavailable on this platform.`
+      );
     } finally {
       setBusyAction(false);
     }
@@ -355,6 +378,24 @@ export default function SettingsScreen() {
             </View>
             <Text style={[styles.actionRowText, { color: theme.text }]}>
               Sync DummyJSON API data
+            </Text>
+            <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
+          </Pressable>
+
+          <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.actionRow,
+              pressed && { backgroundColor: theme.backgroundElement },
+            ]}
+            disabled={busyAction}
+            onPress={handleExportBackup}>
+            <View style={styles.settingIconBox}>
+              <Ionicons name="download-outline" size={20} color={theme.primary} />
+            </View>
+            <Text style={[styles.actionRowText, { color: theme.text }]}>
+              Export local backup
             </Text>
             <Ionicons name="chevron-forward" size={18} color={theme.textTertiary} />
           </Pressable>
