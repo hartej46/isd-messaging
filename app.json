@@ -32,6 +32,13 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow ISD Messaging to pick photos to share in chats.",
+          "cameraPermission": "Allow ISD Messaging to take photos to share in chats."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
