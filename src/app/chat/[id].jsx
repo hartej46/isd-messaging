@@ -15,11 +15,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { useTheme } from '@/hooks/use-theme';
+import { useNotifications } from '@/context/NotificationContext';
 import { useSettings } from '@/context/SettingsContext';
 import { storageService } from '@/services/storage';
 import { chatApi } from '@/services/chatApi';
 import { formatShortTime } from '@/utils/formatters';
-import { pickContextualReply } from '@/utils/replyGenerator';
 import { BorderRadius, Spacing } from '@/constants/theme';
 import { ChatHeader } from '@/components/one-ui/ChatHeader';
 import { MessageBubble } from '@/components/one-ui/MessageBubble';
@@ -29,6 +29,7 @@ import { ChatOptionsModal } from '@/components/one-ui/ChatOptionsModal';
 export default function ChatThreadScreen() {
   const theme = useTheme();
   const settingsContext = useSettings();
+  const notifications = useNotifications();
   const isDark = settingsContext?.resolvedColorScheme === 'dark';
   const { id } = useLocalSearchParams();
   const threadId = Array.isArray(id) ? id[0] : id;
@@ -39,8 +40,10 @@ export default function ChatThreadScreen() {
   const [loading, setLoading] = useState(Boolean(threadId));
   const [errorMsg, setErrorMsg] = useState(null);
   const [isSending, setIsSending] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
   const [optionsVisible, setOptionsVisible] = useState(false);
+  const isTyping = notifications?.typingThreadId === threadId;
+  const setActiveThreadId = notifications?.setActiveThreadId;
+  const subscribeIncoming = notifications?.subscribeIncoming;
 
   const flatListRef = useRef(null);
   const timersRef = useRef([]);
@@ -69,6 +72,8 @@ export default function ChatThreadScreen() {
       };
     }
 
+    setActiveThreadId?.(threadId);
+
     Promise.all([
       storageService.getThreadById(threadId),
       storageService.getMessages(threadId),
@@ -90,9 +95,22 @@ export default function ChatThreadScreen() {
 
     return () => {
       isMountedRef.current = false;
+      setActiveThreadId?.(null);
       activeTimers.forEach((t) => clearTimeout(t));
     };
-  }, [threadId]);
+  }, [setActiveThreadId, threadId]);
+
+  useEffect(() => {
+    if (!subscribeIncoming || !threadId) return undefined;
+    return subscribeIncoming((event) => {
+      if (event.threadId !== threadId || !isMountedRef.current) return;
+      setMessages(event.messages);
+      const scrollTimer = setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 60);
+      timersRef.current.push(scrollTimer);
+    });
+  }, [subscribeIncoming, threadId]);
 
   const scrollToBottom = () => {
     if (flatListRef.current && messages.length > 0) {
@@ -144,41 +162,14 @@ export default function ChatThreadScreen() {
 
       const settings = await storageService.getSettings();
       if (settings.autoReply && isMountedRef.current) {
-        const typingTimer = setTimeout(() => {
-          if (isMountedRef.current) {
-            setIsTyping(true);
-            flatListRef.current?.scrollToEnd({ animated: true });
-          }
-        }, 700);
-        timersRef.current.push(typingTimer);
-
-        const replyTimer = setTimeout(async () => {
-          if (!isMountedRef.current) return;
-          await storageService.updateMessageStatus(threadId, newMessage.id, 'read');
-
-          const remoteReply = await chatApi.fetchRandomReply();
-          const replyText =
-            remoteReply || pickContextualReply(cleanText, thread?.contactName || '');
-
-          const replyMsg = {
-            id: `msg_reply_${Date.now()}`,
-            threadId,
-            text: replyText,
-            sender: 'them',
-            timestamp: formatShortTime(),
-            status: 'read',
-          };
-
-          const afterReply = await storageService.saveMessage(threadId, replyMsg);
-          if (isMountedRef.current) {
-            setIsTyping(false);
-            setMessages(afterReply);
-            setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: true });
-            }, 60);
-          }
-        }, 1800);
-        timersRef.current.push(replyTimer);
+        notifications?.scheduleIncomingReply({
+          threadId,
+          contactName: thread?.contactName || '',
+          avatarColor: thread?.avatarColor,
+          avatarUrl: thread?.avatarUrl || null,
+          outgoingText: cleanText,
+          outgoingMessageId: newMessage.id,
+        });
       }
     } catch {
       if (isMountedRef.current) setErrorMsg('Could not send message.');

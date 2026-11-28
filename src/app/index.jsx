@@ -13,6 +13,7 @@ import { MessageSquare, Search } from 'lucide-react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
@@ -33,6 +34,8 @@ export default function HomeScreen() {
   const theme = useTheme();
   const { logout } = useAuth();
   const settingsContext = useSettings();
+  const notifications = useNotifications();
+  const subscribeIncoming = notifications?.subscribeIncoming;
   const showUnreadBadge = settingsContext?.settings?.notifications ?? true;
   const params = useLocalSearchParams();
   const initialTab = Array.isArray(params.tab) ? params.tab[0] : params.tab;
@@ -95,6 +98,13 @@ export default function HomeScreen() {
       };
     }, [])
   );
+
+  useEffect(() => {
+    if (!subscribeIncoming) return undefined;
+    return subscribeIncoming(() => {
+      refreshData();
+    });
+  }, [subscribeIncoming, refreshData]);
 
   const handleRefresh = async () => {
     setRefreshing(true);

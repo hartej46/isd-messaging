@@ -12,8 +12,10 @@ import {
 } from 'expo-router';
 
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { NotificationProvider } from '@/context/NotificationContext';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
 import { LaunchIntroOverlay } from '@/components/one-ui/LaunchIntroOverlay';
+import { NotificationBanner } from '@/components/one-ui/NotificationBanner';
 
 preventAutoHideAsync();
 
@@ -59,6 +61,7 @@ function NavigationProtector({ isDark }) {
         isLoading={isLoading}
         onVisibilityChange={setIntroVisible}
       />
+      <NotificationBanner />
     </View>
   );
 }
@@ -70,7 +73,9 @@ function RootThemeShell() {
   return (
     <ThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
       <AuthProvider>
-        <NavigationProtector isDark={isDark} />
+        <NotificationProvider>
+          <NavigationProtector isDark={isDark} />
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

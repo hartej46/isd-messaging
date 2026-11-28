@@ -108,7 +108,8 @@ export const messageStorage = {
     return stored;
   },
 
-  async saveMessage(threadId, message) {
+  async saveMessage(threadId, message, options = {}) {
+    const { incrementUnread = false } = options;
     const current = await this.getMessages(threadId);
     const updated = [...current, message];
     await writeJson(threadMessagesKey(threadId), updated);
@@ -116,11 +117,13 @@ export const messageStorage = {
     const threads = await this.getThreads();
     const threadIndex = threads.findIndex((t) => t.id === threadId);
     if (threadIndex >= 0) {
+      const existing = threads[threadIndex];
       const movedThread = {
-        ...threads[threadIndex],
+        ...existing,
         lastMessage: message.text,
         timestamp: message.timestamp,
         updatedAt: Date.now(),
+        unreadCount: incrementUnread ? (existing.unreadCount || 0) + 1 : existing.unreadCount,
       };
       const remaining = threads.filter((t) => t.id !== threadId);
       await this.saveThreads([movedThread, ...remaining]);

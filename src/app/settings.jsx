@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from '@/context/NotificationContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useTheme } from '@/hooks/use-theme';
 import { storageService } from '@/services/storage';
@@ -53,6 +54,7 @@ export default function SettingsScreen() {
   const theme = useTheme();
   const { user, logout } = useAuth();
   const { settings, updateSettings } = useSettings();
+  const notifications = useNotifications();
   const [stats, setStats] = useState({ threadCount: 0, messageCount: 0 });
   const [busyAction, setBusyAction] = useState(false);
 
@@ -295,6 +297,20 @@ export default function SettingsScreen() {
               thumbColor="#FFFFFF"
             />
           </View>
+
+          <View style={[styles.rowDivider, { backgroundColor: theme.borderLight }]} />
+
+          <SettingsActionRow
+            iconName="paper-plane-outline"
+            iconColor={theme.primary}
+            label="Preview notification banner"
+            labelColor={theme.text}
+            chevronColor={theme.textTertiary}
+            disabled={busyAction}
+            onPress={() => {
+              notifications?.triggerDemoNotification();
+            }}
+          />
         </View>
 
         <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>
